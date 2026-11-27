@@ -38,4 +38,6 @@ test("CLI evidence run 支持 -- 后的命令", () => {
   assert.ok(fs.existsSync(path.join(root, ".sdd", "reviews", "REV-TASK-0001-001.md")));
   const list = runCli(root, ["review", "list"]);
   assert.match(list.stdout, /REV-TASK-0001-001/);
+  runCli(root, ["task", "update", id, "--status", "review", "--add-evidence", "EV-0001", "--end-commit", "HEAD"]);
+  assert.equal(listTasks(root)[0].end_commit, "HEAD");
 });

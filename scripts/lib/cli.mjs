@@ -289,10 +289,10 @@ async function main(argv) {
       const id = positional[2];
       if (!id) throw new Error("用法：sdd task update TASK-0001 --status ...");
       const patch = {};
+      const aliases = { "baseline-commit": "baseline_commit", "end-commit": "end_commit" };
       for (const key of ["status", "owner", "title", "feature", "phase", "story", "risk", "baseline-commit", "end-commit", "review"]) {
         if (options[key] !== undefined) {
-          const field = key.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-          patch[field] = options[key];
+          patch[aliases[key] ?? key] = options[key];
         }
       }
       for (const key of ["scope", "acceptance", "verify", "depends-on"]) {
