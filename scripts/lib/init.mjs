@@ -64,7 +64,7 @@ function ensureGitignore(projectRoot) {
   const file = path.join(projectRoot, ".gitignore");
   const current = exists(file) ? readText(file, "") : "";
   const lines = new Set(current.split(/\r?\n/).filter(Boolean));
-  const additions = [".sdd/backup/"];
+  const additions = [".sdd/backup/", ".serena/"];
   const missing = additions.filter((line) => !lines.has(line));
   if (missing.length) {
     writeText(file, `${current.trimEnd()}${current.trim() ? "\n" : ""}${missing.join("\n")}\n`);
