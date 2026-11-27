@@ -3,7 +3,7 @@ import { exists, readText } from "./util.mjs";
 import { GATES, loadState, setGate, setPhase, sddPath } from "./state.mjs";
 import { latestGateDecision, openBlockingDecisions } from "./decision.mjs";
 import { latestReview, reviewPasses } from "./review.mjs";
-import { listEvidence, validateEvidence } from "./evidence.mjs";
+import { loadEvidence, validateEvidence } from "./evidence.mjs";
 import { listTasks, parseTasksMarkdown, resolveFeatureDir, updateTask } from "./task.mjs";
 
 function result(name, ok, message = "") {
@@ -165,13 +165,14 @@ function checkFinal(projectRoot) {
   checks.push(result("所有任务 done", notDone.length === 0, notDone.length ? `未完成：${notDone.map((t) => `${t.id}(${t.status})`).join(", ")}` : ""));
   const evidenceErrors = [];
   for (const task of tasks.filter((t) => t.status === "done")) {
-    const evidence = listEvidence(projectRoot, task.id);
-    if (!evidence.length) {
-      evidenceErrors.push(`${task.id} 无证据`);
+    const evidenceIds = task.evidence ?? [];
+    if (!evidenceIds.length) {
+      evidenceErrors.push(`${task.id} 未绑定证据`);
       continue;
     }
+    const evidence = evidenceIds.map((id) => loadEvidence(projectRoot, task.id, id)).filter(Boolean);
     const passing = evidence.filter((ev) => validateEvidence(projectRoot, ev).ok);
-    if (!passing.length) evidenceErrors.push(`${task.id} 无 exit 0 且日志存在的证据`);
+    if (passing.length === 0) evidenceErrors.push(`${task.id} 无 exit 0 且日志存在的证据`);
     if (task.risk === "high" && !reviewPasses(latestReview(projectRoot, { kind: "task", task: task.id }))) {
       evidenceErrors.push(`${task.id} 是高风险任务，缺少独立 task review`);
     }

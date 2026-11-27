@@ -106,5 +106,13 @@ export function reviewPasses(review) {
   if (!["pass", "converged", "clean"].includes(review.verdict)) return false;
   if (review.independent === false) return false;
   const findings = findingsBySeverity(review);
-  return [...findings.P0, ...findings.P1].every((f) => f.status === "fixed" || f.status === "closed");
+  const criticalOk = [...findings.P0, ...findings.P1].every(
+    (f) => f.status === "fixed" || f.status === "closed",
+  );
+  const minorOk = [...findings.P2, ...findings.P3].every(
+    (f) => f.status === "fixed"
+      || f.status === "closed"
+      || (f.status === "accepted" && f.owner && f.due && f.accepted_reason),
+  );
+  return criticalOk && minorOk;
 }
