@@ -148,7 +148,7 @@ permissions:
     resource: "*sdd decision answer*"
     effect: ask
   - action: shell
-    resource: "*sdd upgrade --write*"
+    resource: "*upgrade*--write*"
     effect: ask
   - action: external_directory
     resource: "*"
