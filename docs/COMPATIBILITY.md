@@ -62,6 +62,8 @@ resolve-template
 
 Windows 用 `.specify/scripts/powershell/*.ps1`，macOS/Linux 用 `bash/*.sh`，也可用 `python/*.py`。
 
+Windows 证据命令：`.exe` 直接 spawn；`.cmd`/`.bat` 经 PowerShell splatting。元字符不会执行、`%VAR%` 不展开，但 cmd 层仍可能剥离参数引号（Windows 固有）。重要命令优先用 `.exe` 或把复杂参数写入脚本/文件。
+
 ### 扩展
 
 - `git`：`before_specify` 建分支；auto-commit 关闭。

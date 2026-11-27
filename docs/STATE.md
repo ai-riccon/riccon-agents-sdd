@@ -135,6 +135,7 @@ planned → ready → in_progress → review → done
 - done 证据要求 `commit === task.end_commit`；`gate=final` 证据要求 `commit === 当前 HEAD`。
 - `--gate final` 允许对 `done` 任务取最终证据，绑定到最后一个任务。
 - 日志上限默认 2 MB，超出截断并标记。
+- Windows 下 `.cmd`/`.bat` 目标会经 PowerShell splatting 调用；元字符不会执行、`%VAR%` 不展开，但 cmd 层仍可能剥离参数中的引号（Windows 固有）。重要命令优先用 `.exe` 或把复杂参数写入脚本/文件。
 - v1 不做日志哈希；需要时可在 config 打开 `evidence.hash`（未来）。
 
 ## 7. review

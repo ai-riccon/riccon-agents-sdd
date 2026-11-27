@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.4 — 2026-11-27
+
+终审 M1/M2 残留。
+
+### 修复
+
+- **M1**：修复 `templates/agents/permissions.yml` 头部 UTF-8 BOM + 中文 mojibake，恢复 3 行中文注释；`check.mjs` 增加 BOM/替换字符/权限头检查，新增 `tests/encoding.test.mjs`；维护规则禁止用 PowerShell `Set-Content` 写 UTF-8。
+- **M2**：在 `README.md`、`docs/STATE.md`、`docs/COMPATIBILITY.md` 落点说明 Windows `.cmd`/`.bat` 的 PowerShell splatting 行为与引号局限；CHANGELOG 声明与事实一致。
+- 测试：70 个 `node:test`。
+
 ## 0.1.3 — 2026-11-27
 
 0.1.2 终审的 N1–N4 低危残留。

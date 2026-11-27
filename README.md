@@ -4,7 +4,7 @@
 
 你只跟 `sdd/lead` 对话。lead 决定执行哪些 spec-kit 命令、调度 `product` / `architect` / `builder` / `verifier` / `ops`，维护 `.sdd/` 交付账本，并在四道门停下来找你确认。
 
-当前版本：`0.1.3`。这是一个**受监督的交付团队**，不是全自动软件公司；生产发布、花钱、破坏性操作仍需你明确批准。
+当前版本：`0.1.4`。这是一个**受监督的交付团队**，不是全自动软件公司；生产发布、花钱、破坏性操作仍需你明确批准。
 
 ---
 
@@ -239,6 +239,7 @@ node scripts/sdd.mjs upgrade --project /path/to/project --write --yes
 - 生产发布、真实 PII、生产密钥必须单独评审与批准。
 - Agent 是概率系统；门禁和证据降低风险，但不能消除错误。
 - 权限模式不是安全边界：子代理仍可能通过 shell 执行任意 `node` 命令；CLI 不校验调用者身份。`reviews/state` 的 edit deny 和 shell ask 是误操作防线，不是恶意隔离；真实隔离需要沙箱/一次性运行时。
+- Windows 下 `.cmd`/`.bat` 目标经 PowerShell splatting：元字符不执行、`%VAR%` 不展开，但 cmd 层仍可能剥离参数引号；重要命令优先用 `.exe`。
 
 ---
 

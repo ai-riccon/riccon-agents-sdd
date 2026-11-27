@@ -42,6 +42,7 @@ npm run sync:agents   # 把 permissions/models 同步进 agent frontmatter
 8. **版本单一事实源。** `scripts/lib/version.mjs` 的 `TEAM_VERSION` 是版本源；同步 `package.json`、`README.md`、`CHANGELOG.md`。
 9. **测试先行或同步。** 改 CLI/gate/task/evidence/upgrade 必须带测试；`npm test` 和 `npm run check` 必须全绿。
 10. **升级必须可回滚。** 改 manifest/升级逻辑时保留 dry-run、备份和本地修改冲突处理。
+11. **UTF-8 文件不要用 PowerShell `Set-Content`/`Out-File` 写。** Windows PowerShell 5.1 的 `-Encoding utf8` 会写 BOM，且可能按 ANSI 读取导致中文 mojibake。用 `write` 工具或 Node `fs`；`npm run check` 会拒绝 BOM/替换字符。
 
 ## 修改 agent
 

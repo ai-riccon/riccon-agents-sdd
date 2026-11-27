@@ -119,3 +119,25 @@ N1–N4 均确认存在；N1 的报告归属问题属实：`final-gate.test.mjs`
 
 - shell 旁路/CLI 身份校验仍是已声明设计取舍。
 - `nextId` 并发锁、时区配置读取、部分 P3 重复逻辑仍待办。
+
+---
+
+## 追加处理（0.1.4，2026-11-27）
+
+### 确认
+
+- **M1 字节级确认**：`templates/agents/permissions.yml` 头部为 UTF-8 BOM（`EF BB BF`）+ mojibake，3 行中文注释被合并为一行；YAML 规则本身未受影响。
+- **M2 确认**：0.1.3 CHANGELOG 声称“文档注明 .cmd 引号局限”，但 README/STATE/COMPAT/EVALS 均无落点。
+
+### 修复
+
+- M1：重写 permissions.yml 头部 3 行中文注释，去除 BOM；`scripts/check.mjs` 增加 BOM/替换字符/权限头检查；新增 `tests/encoding.test.mjs`；AGENTS.md 增加“不要用 PowerShell Set-Content 写 UTF-8”规则。
+- M2：在 README、docs/STATE.md、docs/COMPATIBILITY.md 落点说明 `.cmd`/`.bat` 的 PowerShell splatting 与 cmd 引号局限；CHANGELOG 声明与事实一致。
+- 目标项目 `D:\Development\riccon-hub` 已 `sdd upgrade --write --yes` 到 0.1.4，安装的 permissions 模板已恢复无 BOM 中文头。
+
+### 回归
+
+- `npm test`：70/70 通过。
+- `npm run check`：通过（0.1.4），编码守卫覆盖 BOM/替换字符/权限头。
+- `sdd doctor`（riccon-hub）：通过。
+- 安装后的 `.opencode/sdd/templates/agents/permissions.yml`：无 BOM，首行 `# Riccon SDD 权限单一事实源。`。
