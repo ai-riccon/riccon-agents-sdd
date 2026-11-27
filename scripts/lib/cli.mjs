@@ -132,7 +132,7 @@ function usage() {
   sdd task sync [--feature 目录]
   sdd task list | show <TASK-0001> | update <TASK-0001> --status ...
   sdd task scope <TASK-0001>
-  sdd evidence run --task TASK-0001 --agent sdd/builder -- <命令>
+  sdd evidence run --task TASK-0001 --agent sdd/builder [--cwd 子目录] -- <命令>
   sdd evidence list --task TASK-0001
   sdd gate check --gate kickoff|spec|plan|tasks|final
   sdd review new --kind task --task TASK-0001 --verdict pass --reviewed-commit <sha>
@@ -331,6 +331,7 @@ async function main(argv) {
         taskId: options.task,
         agent: options.agent,
         command: commandArgs.join(" "),
+        cwd: options.cwd ? path.resolve(options.cwd) : ctx.projectRoot,
         gate: options.gate ?? null,
         allowDirty: Boolean(options["allow-dirty"]),
         timeoutMs: options.timeout ? Number(options.timeout) : 0,
