@@ -5,7 +5,7 @@
 | # | 验收项 | 方式 |
 |---|---|---|
 | 1 | 源仓库检查通过 | `npm run check` |
-| 2 | 单元/集成测试通过 | `npm test`（19 个测试） |
+| 2 | 单元/集成测试通过 | `npm test`（20 个测试） |
 | 3 | dry-run init 通过 | `npm run smoke` |
 | 4 | 真实项目安装 | `sdd init <temp>` + `sdd doctor` |
 | 5 | spec-kit 1.4.5 集成 | `specify version --json`、命令/模板/脚本检查 |
