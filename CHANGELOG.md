@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.3 — 2026-11-27
+
+0.1.2 终审的 N1–N4 低危残留。
+
+### 修复
+
+- **N1**：新增 `doctor` CLI 路径测试（完整项目通过 / 缺命令失败）；prompts 测试补 task-packet 实际路径与必读文件断言；更正 0.1.2 处理结果中 final-scope 的归属。
+- **N2**：新增 Windows `.cmd` 目标测试，验证 PowerShell splatting 下元字符作为数据传递、`%VAR%` 不展开；文档注明 `.cmd` 引号可能被 cmd 剥离。
+- **N3**：`checkVersions` 独立为可测模块，新增篡改夹具负例；review/evidence schema 增加 Ajv 负例；config 非映射测试命名修正。
+- **N4**：权限 shell ask 通配从 `*task*new*` 收紧为 `*task new*` 等，减少误匹配。
+
+### 测试
+
+- 69 个 `node:test`。
+
 ## 0.1.2 — 2026-11-27
 
 0.1.1 验证评审的残留硬化。
@@ -9,7 +24,7 @@
 - **R1**：Windows 非 `.exe` 命令改走 PowerShell argv 包装，不再经 `cmd.exe` 拼字符串；空格/引号参数保真，`cmd` 元字符不注入，`%VAR%` 不展开；证据日志用 `formatArgv` 记录。
 - **R2**：`scripts/check.mjs` 增校 README/CHANGELOG 版本；新增版本一致性测试。
 - **R3**：subagents shell ask 补 `task new`/`task sync`/`retro new`；`.sdd/evidence/**` 对所有角色 edit deny，证据只能由 `sdd evidence run` 生成。
-- **R4**：测试增至 63 个，补 handoff、metrics、config、status、speckit、init backup、final scope、版本一致性。
+- **R4**：测试增至 63 个，补 handoff、metrics、config、status、speckit、init backup、doctor、版本一致性；final scope 为 0.1.1 既有测试，本轮继续通过。
 - **R5**：review schema 对非 analyze 强制 `reviewed_commit` 非空/`reviewed_evidence` 非空；`runEvidence` 无 HEAD 直接拒绝；docs/STATE 注明 final 证据绑定当前 HEAD。
 - **R6**：usage 补 `--dry-run`/`--yes`；删除死代码 `readEvidenceLog`/`passingEvidence`/`taskStats`/`gateCommand`；超时测试增加耗时断言。
 

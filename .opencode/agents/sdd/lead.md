@@ -148,7 +148,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*decision*answer*"
+    resource: "*decision answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"

@@ -8,12 +8,19 @@ function read(rel) {
   return fs.readFileSync(path.join(repoRoot, rel), "utf8");
 }
 
-test("lead 提示词包含 final 证据、ops、blocked 解锁与 task-packet 路径", () => {
+test("lead 提示词包含 final 证据、ops、blocked 解锁与可用 task-packet 路径", () => {
   const lead = read(".opencode/agents/sdd/lead.md");
   assert.match(lead, /final 证据绑定/);
   assert.match(lead, /Ops 轨道/);
   assert.match(lead, /blocked 解锁/);
   assert.match(lead, /\.opencode\/sdd\/templates\/prompts\/task-packet\.md/);
+  assert.ok(fs.existsSync(path.join(repoRoot, "templates", "prompts", "task-packet.md")));
+  const packet = read("templates/prompts/task-packet.md");
+  assert.match(packet, /constitution/);
+  assert.match(packet, /contracts\//);
+  assert.match(packet, /data-model/);
+  assert.match(packet, /\.sdd\/handoffs/);
+  assert.match(packet, /\.specify/);
 });
 
 test("verifier 提示词要求结构化 findings", () => {

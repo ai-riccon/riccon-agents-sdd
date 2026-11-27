@@ -147,7 +147,7 @@ R1 已实测复现：Windows 下 `runProcessArgv('node', ['-e', ...])` 参数被
 | R1 | Windows 非 `.exe` 命令改用 PowerShell argv 包装（临时 JSON + run.ps1），`& program @argv` 保真；`.exe` 仍直接 spawn；证据日志用 `formatArgv` |
 | R2 | `check.mjs` 校 README/CHANGELOG 版本；新增 `tests/version.test.mjs` |
 | R3 | subagents ask 补 `task new/sync/retro new`；`.sdd/evidence/**` 全角色 edit deny |
-| R4 | 新增 handoff/metrics/config/status/speckit/init-backup/version/final-scope 测试；总数 63 |
+| R4 | 新增 handoff/metrics/config/status/speckit/init-backup/version/doctor 测试；final-scope 为 0.1.1 既有测试，本轮继续通过；总数 63 |
 | R5 | review schema 非 analyze 强制 commit 非空/evidence 非空；`runEvidence` 无 HEAD 拒绝；STATE 注明 final 证据绑定 HEAD |
 | R6 | usage 补 `--dry-run`/`--yes`；删除 `readEvidenceLog`/`passingEvidence`/`taskStats`/`gateCommand`；超时测试加耗时断言 |
 

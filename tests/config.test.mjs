@@ -27,7 +27,7 @@ test("mergeDeep 不丢默认键", () => {
   assert.deepEqual(merged, { a: { b: 3, c: 2 } });
 });
 
-test("config 文件解析失败会抛错", () => {
+test("config 非映射被拒绝", () => {
   const root = makeProject("config-bad");
   writeYaml(path.join(root, ".sdd", "config.yml"), "not: [valid");
   assert.throws(() => loadConfig(root), /YAML|flow|sequence/i);

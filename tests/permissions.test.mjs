@@ -46,10 +46,10 @@ test("子代理写操作 shell 需要确认，verifier 的 review new 放行", (
   const hasRule = (perms, action, resource, effect) => (perms ?? []).some(
     (p) => p.action === action && p.resource === resource && p.effect === effect,
   );
-  for (const resource of ["*task*new*", "*task*update*", "*task*sync*", "*gate*check*", "*retro*new*"]) {
+  for (const resource of ["*task new*", "*task update*", "*task sync*", "*gate check*", "*retro new*"]) {
     assert.equal(hasRule(builder.permissions, "shell", resource, "ask"), true, resource);
   }
-  assert.equal(hasRule(verifier.permissions, "shell", "*review*new*", "allow"), true);
+  assert.equal(hasRule(verifier.permissions, "shell", "*review new*", "allow"), true);
 });
 
 test("evidence 文件禁止直接 edit，必须走 evidence run", () => {

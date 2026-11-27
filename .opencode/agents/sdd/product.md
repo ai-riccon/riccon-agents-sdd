@@ -148,7 +148,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*decision*answer*"
+    resource: "*decision answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -172,31 +172,31 @@ permissions:
     resource: "*"
     effect: deny
   - action: shell
-    resource: "*task*new*"
+    resource: "*task new*"
     effect: ask
   - action: shell
-    resource: "*task*update*"
+    resource: "*task update*"
     effect: ask
   - action: shell
-    resource: "*task*sync*"
+    resource: "*task sync*"
     effect: ask
   - action: shell
-    resource: "*review*new*"
+    resource: "*review new*"
     effect: ask
   - action: shell
-    resource: "*gate*check*"
+    resource: "*gate check*"
     effect: ask
   - action: shell
-    resource: "*decision*new*"
+    resource: "*decision new*"
     effect: ask
   - action: shell
-    resource: "*decision*answer*"
+    resource: "*decision answer*"
     effect: ask
   - action: shell
-    resource: "*handoff*new*"
+    resource: "*handoff new*"
     effect: ask
   - action: shell
-    resource: "*retro*new*"
+    resource: "*retro new*"
     effect: ask
   - action: edit
     resource: .sdd/state.json

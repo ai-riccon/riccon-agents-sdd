@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { makeProject, initGit, commitAll, writeTasks } from "./helpers.mjs";
 import { listTasks, loadTask, syncTasks, updateTask } from "../scripts/lib/task.mjs";
@@ -182,6 +183,20 @@ test("patch.evidence 会持久化", async () => {
     end_commit: commit,
   });
   assert.deepEqual(updated.evidence, [ev.id]);
+});
+
+test(".cmd 目标经 PowerShell splatting 不执行元字符", { skip: process.platform !== "win32" }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-cmd-"));
+  fs.writeFileSync(path.join(dir, "argdump.mjs"), "console.log(JSON.stringify(process.argv.slice(2)));\n", "utf8");
+  fs.writeFileSync(path.join(dir, "forward.cmd"), '@echo off\nnode "%~dp0argdump.mjs" %*\n', "utf8");
+  const result = await runProcessArgv(path.join(dir, "forward.cmd"), [
+    'x" & echo INJECTED & "',
+    "%SDD_R1%",
+  ]);
+  assert.equal(result.exitCode, 0);
+  const parsed = JSON.parse(result.stdout.trim());
+  assert.deepEqual(parsed, ["x & echo INJECTED & ", "%SDD_R1%"]);
+  assert.equal(result.stdout.trim().split(/\r?\n/).length, 1);
 });
 
 test("没有 HEAD 时拒绝取证", async () => {

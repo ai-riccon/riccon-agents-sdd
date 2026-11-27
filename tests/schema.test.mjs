@@ -19,8 +19,15 @@ function schema(name) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, "schemas", `${name}.schema.json`), "utf8"));
 }
 
+const validators = new Map();
+
+function validator(name) {
+  if (!validators.has(name)) validators.set(name, ajv.compile(schema(name)));
+  return validators.get(name);
+}
+
 function check(name, data) {
-  const validate = ajv.compile(schema(name));
+  const validate = validator(name);
   if (!validate(data)) {
     assert.fail(`${name} schema 不通过：${JSON.stringify(validate.errors)}`);
   }
@@ -87,4 +94,51 @@ test("生成的 project/state/task/decision/review/retro/manifest/evidence 符�
     manual: false,
     created_at: "2026-11-27T12:00:01+08:00",
   });
+});
+
+test("review schema 非 analyze 强制 commit/evidence", () => {
+  const validate = validator("review");
+  const base = {
+    schema_version: 1,
+    id: "REV-TASK-0001-001",
+    kind: "task",
+    task: "TASK-0001",
+    reviewer: "sdd/verifier",
+    verdict: "pass",
+    independent: true,
+    reviewed_commit: "abc123",
+    reviewed_evidence: ["EV-0001"],
+    findings: [],
+    created_at: "2026-11-27T12:00:00+08:00",
+  };
+  assert.equal(validate(base), true);
+  assert.equal(validate({ ...base, reviewed_commit: null }), false);
+  assert.equal(validate({ ...base, reviewed_evidence: [] }), false);
+  assert.equal(validate({ ...base, kind: "analyze", reviewed_commit: null, reviewed_evidence: [] }), true);
+});
+
+test("evidence schema 要求 commit 字符串", () => {
+  const validate = validator("evidence");
+  const base = {
+    schema_version: 1,
+    id: "EV-0001",
+    task: "TASK-0001",
+    agent: "sdd/builder",
+    command: "git rev-parse HEAD",
+    cwd: "D:/project",
+    exit_code: 0,
+    started_at: "2026-11-27T12:00:00+08:00",
+    finished_at: "2026-11-27T12:00:01+08:00",
+    duration_ms: 1000,
+    commit: "abc123",
+    dirty: false,
+    log_path: ".sdd/evidence/TASK-0001/EV-0001.log",
+    log_bytes: 10,
+    truncated: false,
+    manual: false,
+    created_at: "2026-11-27T12:00:01+08:00",
+  };
+  assert.equal(validate(base), true);
+  assert.equal(validate({ ...base, commit: null }), false);
+  assert.equal(validate({ ...base, commit: "" }), false);
 });

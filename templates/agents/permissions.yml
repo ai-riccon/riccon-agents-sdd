@@ -1,7 +1,4 @@
-# Riccon SDD 权限单一事实源。
-# 由 scripts/sync-agents.mjs 写入各 agent frontmatter；doctor 检查漂移。
-# 规则顺序：base → subagents → 角色特定；OpenCode 以最后匹配为准。
-
+﻿# Riccon SDD 鏉冮檺鍗曚竴浜嬪疄婧愩€?# 鐢?scripts/sync-agents.mjs 鍐欏叆鍚?agent frontmatter锛沝octor 妫€鏌ユ紓绉汇€?# 瑙勫垯椤哄簭锛歜ase 鈫?subagents 鈫?瑙掕壊鐗瑰畾锛汷penCode 浠ユ渶鍚庡尮閰嶄负鍑嗐€?
 base:
   - action: read
     resource: "*"
@@ -150,7 +147,7 @@ base:
     resource: "sudo *"
     effect: ask
   - action: shell
-    resource: "*decision*answer*"
+    resource: "*decision answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -188,31 +185,31 @@ subagents:
     resource: "*"
     effect: deny
   - action: shell
-    resource: "*task*new*"
+    resource: "*task new*"
     effect: ask
   - action: shell
-    resource: "*task*update*"
+    resource: "*task update*"
     effect: ask
   - action: shell
-    resource: "*task*sync*"
+    resource: "*task sync*"
     effect: ask
   - action: shell
-    resource: "*review*new*"
+    resource: "*review new*"
     effect: ask
   - action: shell
-    resource: "*gate*check*"
+    resource: "*gate check*"
     effect: ask
   - action: shell
-    resource: "*decision*new*"
+    resource: "*decision new*"
     effect: ask
   - action: shell
-    resource: "*decision*answer*"
+    resource: "*decision answer*"
     effect: ask
   - action: shell
-    resource: "*handoff*new*"
+    resource: "*handoff new*"
     effect: ask
   - action: shell
-    resource: "*retro*new*"
+    resource: "*retro new*"
     effect: ask
 
 product:
@@ -313,7 +310,7 @@ verifier:
     resource: "git commit*"
     effect: ask
   - action: shell
-    resource: "*review*new*"
+    resource: "*review new*"
     effect: allow
 
 ops:
