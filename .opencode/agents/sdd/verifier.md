@@ -145,7 +145,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*sdd decision answer*"
+    resource: "*decision*answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -168,6 +168,24 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: shell
+    resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: ask
+  - action: shell
+    resource: "*gate*check*"
+    effect: ask
+  - action: shell
+    resource: "*decision*new*"
+    effect: ask
+  - action: shell
+    resource: "*decision*answer*"
+    effect: ask
+  - action: shell
+    resource: "*handoff*new*"
+    effect: ask
   - action: edit
     resource: .sdd/state.json
     effect: deny
@@ -176,6 +194,9 @@ permissions:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
     effect: deny
   - action: edit
     resource: AGENTS.md
@@ -189,6 +210,9 @@ permissions:
   - action: shell
     resource: git commit*
     effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: allow
 ---
 
 # Riccon SDD Verifier
@@ -261,7 +285,16 @@ node .opencode/sdd/scripts/sdd.mjs review new \
   --reviewed-commit <sha> --reviewed-evidence EV-0001 --session ses_xxx
 ```
 
-然后编辑 `.sdd/reviews/<ID>.md` 补全 findings、AC 对照和证据。返回：review ID、verdict、findings、独立运行的证据 ID、未覆盖的 AC。
+然后编辑 `.sdd/reviews/<ID>.md` 补全 findings、AC 对照和证据。也可以用 `--findings '<JSON 数组>'` 直接传结构化 findings：
+
+```bash
+node .opencode/sdd/scripts/sdd.mjs review new \
+  --kind task --task TASK-0001 --verdict fail \
+  --reviewed-commit <sha> --reviewed-evidence EV-0001 --session ses_xxx \
+  --findings '[{"severity":"P1","title":"空输入返回 0","status":"open","file":"src/add.js"}]'
+```
+
+findings 必须在 frontmatter 里，门禁只读结构化字段；正文写“发现一个问题”但 frontmatter 为空会被当成假绿。返回：review ID、verdict、findings、独立运行的证据 ID、未覆盖的 AC。
 
 ## analyze / converge / final
 

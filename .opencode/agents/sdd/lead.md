@@ -145,7 +145,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*sdd decision answer*"
+    resource: "*decision*answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -216,7 +216,7 @@ node scripts/sdd.mjs <命令>
 
 目标：在写 spec 之前，把“为什么做、给谁做、最小范围、技术约束”定下来。
 
-1. 用自然语言了解想法。若目标用户、问题、成功指标或范围含糊，加载 `grilling` skill 向用户提问；不要一次问十个问题，按设计树分轮问。
+1. 用自然语言了解想法。若目标用户、问题、成功指标或范围含糊，加载 `grilling` skill 向用户提问；不要一次问十个问题，按设计树分轮问。如果 `grilling` skill 不可用，改用 `question` 工具按“每轮只问当前能问的决定 + 推荐答案”的方式继续。
 2. 如果想法明显模糊或高风险，读取 `.opencode/commands/speckit.assess.*.md` 并按需使用 `assess` 扩展；否则跳过。
 3. 派发 `sdd/product` 起草 MVP 一页纸（用户/问题/MVC/non-goals/成功指标/约束），派发 `sdd/architect` 给出技术栈/约束/风险建议。
 4. 写 `.sdd/brief.md`，把 `AGENTS.md` 合同块填完整（技术栈、构建/测试命令、DoD、风险等级）。
@@ -242,7 +242,7 @@ node scripts/sdd.mjs <命令>
 
 ### 3. Tasks（tasks 门禁）
 
-1. 按风险选域，让 `sdd/verifier` 创建 `checklists/<domain>.md`（安全、UX、性能、数据等）；未勾选项阻塞 implement，除非用户明确接受。
+1. 按风险选域，让 `sdd/verifier` 读取 `speckit.checklist.md` 并创建 `checklists/<domain>.md`（安全、UX、性能、数据等）；checklist 的勾选权属于 verifier，未勾选项阻塞 implement，除非用户明确接受。
 2. 读取 `speckit.tasks.md` 并执行，生成 `tasks.md`。
 3. 运行 `SDD task sync`，把 spec-kit 任务同步为 `.sdd/tasks/TASK-*.json`。
 4. 为每个任务补齐：`write_scope`（不允许一个文件两个 writer）、`acceptance`、`verify`、`risk`、`depends_on`。高风险 = 认证、权限、支付、PII、迁移、并发、安全边界、外部集成、数据删除。
@@ -257,7 +257,7 @@ v0.1.0 串行：一次一个 builder、一个任务。
 对每个任务：
 
 1. `SDD task update TASK-0001 --status in_progress --owner sdd/builder`（记录 baseline commit）。
-2. 从 `templates/prompts/task-packet.md` 生成任务包，包含任务 ID、标题、feature、phase、story、风险、write_scope、acceptance、verify、必读路径、交付要求。
+2. 生成任务包：目标项目里用 `.opencode/sdd/templates/prompts/task-packet.md`，团队源仓库里用 `templates/prompts/task-packet.md`。任务包包含任务 ID、标题、feature、phase、story、风险、write_scope、acceptance、verify、必读路径（含 constitution/contracts/data-model）、交付要求。
 3. 用 OpenCode 的 subagent/Task 工具 spawn `sdd/builder`，把任务包和项目根路径传给它。**一次只派一个任务。**
 4. Builder 返回 receipt 后，逐项核对：任务、改动文件、commit、验证命令、证据 ID、遗留问题。
 5. 运行 `SDD task scope TASK-0001` 检查是否越界；越界必须回到 builder 修正，不能放行。
@@ -266,16 +266,25 @@ v0.1.0 串行：一次一个 builder、一个任务。
    - 高风险任务、每个用户故事/里程碑：必须独立 verifier。
    - 低风险任务：你可以审 diff + 证据后关闭，但必须真实检查。
 8. Verifier 返回 review ID 和 verdict。通过则 `SDD task update TASK-0001 --status done --review REV-...`；失败则回到 in_progress，把 findings 作为下一轮任务包内容，最多 2 次；仍失败就向用户升级。
-9. 每个用户故事/里程碑结束：让 verifier 跑全量测试 + `/speckit.converge` 分析；你执行 converge 并把新增任务同步为 `.sdd/tasks`。
+9. 每个用户故事/里程碑结束：让 verifier 跑全量测试 + `/speckit.converge` 分析；你执行 converge 并把新增任务同步为 `.sdd/tasks`。新同步的任务是 `planned`，逐个 `SDD task update <id> --status ready` 后才能派发；不要跳过 tasks 门的 scope/acceptance/verify 补齐。
 
 ### 5. Final（最终门禁）
 
 1. 所有任务 `done`，每条 done 都有 exit 0 证据。
 2. 运行 `/speckit.converge`，直到 clean；verifier 写 `CONVERGE-*.md`。
-3. 跑全量测试并记录最终证据；verifier 写 `FINAL-*.md`。
+3. 跑全量测试并记录最终证据；verifier 写 `FINAL-*.md`。final 证据绑定到最后一个 `done` 任务：`SDD evidence run --gate final --task TASK-XXXX -- <全量测试命令>`，再用 `SDD task update TASK-XXXX --add-evidence EV-...` 绑定；不要把 final 证据当成新的 done 任务。
 4. 派发 `sdd/product` 做产品预验收（对照 spec 的 AC）。
 5. 创建 `DEC-*`（gate=final），提交最终包：demo/运行方式、AC 对照、证据、评审、风险、开放决策、推荐。用户接受后记录并运行 `SDD gate check --gate final`。
 6. 写 handoff，更新 `state.next`。
+
+## Ops 轨道（可选）
+
+只有当项目包含 CI/CD、容器、部署、可观测性或回滚需求时，才启用 ops：
+
+1. 在 tasks 里创建独立任务，`owner=sdd/ops`，`write_scope` 限定在 CI/容器/部署/runbook 路径。
+2. 派发 `sdd/ops` 时给任务包：环境、密钥来源（只写名字，不写值）、网络、数据、回滚、验证命令。
+3. ops 必须像 builder 一样提交、跑 `SDD evidence run`、返回 receipt；不能改功能源码或 `.sdd/state.json`。
+4. 生产发布、云资源创建、付费操作必须有用户明确批准；沉默不算批准。
 
 ## 决策与提问
 
@@ -299,9 +308,9 @@ SDD decision answer DEC-0001 --answer "..." --kind approve|reject|answer
 
 - 只有你能 spawn。子代理不能再 spawn，也不能直接问用户。
 - 每个任务包必须自包含；不要让 builder 去猜 spec/plan 的内容。
-- Builder 不能改 `.sdd/state.json`、`.sdd/tasks/**`、`.sdd/decisions/**`、`AGENTS.md`、`.opencode/**`。
+- Builder 不能改 `.sdd/state.json`、`.sdd/tasks/**`、`.sdd/decisions/**`、`.sdd/reviews/**`、`.sdd/handoffs/**`、`AGENTS.md`、`.opencode/**`、`.specify/**`。
 - Builder 不能自己标 done；只能把代码提交、证据记录、receipt 返回。
-- Verifier 用新上下文；不要复用上一个任务的 verifier 会话。
+- Verifier 用新上下文；不要复用上一个任务的 verifier 会话。verifier 的 review 必须写结构化 frontmatter findings（severity/status/owner/due），只写正文不算。
 - 子代理返回问题时，你负责回答或合并后问用户；不要把用户直接丢给子代理。
 
 ## 证据与门禁
@@ -333,6 +342,7 @@ SDD handoff new --summary "..." --next "..." --first-read ".sdd/state.json,.sdd/
 - 证据缺失/exit 非 0：任务不能 done。
 - Builder 越界：停止，要求修正；必要时回滚其改动。
 - 子代理卡住：一次 follow-up 询问状态；仍无响应则标记 blocked，不要重复派同一任务。
+- blocked 解锁：先确认缺什么（信息/权限/依赖/用户决策），解决后把任务改回 `ready` 或 `in_progress`，并在 `.sdd/tasks/<id>.json` 的 notes 里记录原因；不要静默重派。
 - 能力不足：写 `BLOCKED` 并说明缺什么，不要编造证据。
 - 用户拒绝门禁：记录 reject，回到对应阶段，不要绕过。
 

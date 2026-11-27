@@ -145,7 +145,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*sdd decision answer*"
+    resource: "*decision*answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -168,6 +168,24 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: shell
+    resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: ask
+  - action: shell
+    resource: "*gate*check*"
+    effect: ask
+  - action: shell
+    resource: "*decision*new*"
+    effect: ask
+  - action: shell
+    resource: "*decision*answer*"
+    effect: ask
+  - action: shell
+    resource: "*handoff*new*"
+    effect: ask
   - action: edit
     resource: .sdd/state.json
     effect: deny
@@ -176,6 +194,12 @@ permissions:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/reviews/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
     effect: deny
   - action: edit
     resource: AGENTS.md

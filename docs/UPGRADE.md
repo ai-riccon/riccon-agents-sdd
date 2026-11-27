@@ -4,7 +4,7 @@
 
 | 面 | 命令 | 说明 |
 |---|---|---|
-| 团队文件 | `sdd upgrade --project <dir> --dry-run/--write` | 在团队源仓库运行 |
+| 团队文件 | `sdd upgrade --project <dir> --dry-run/--write --yes` | 在团队源仓库运行 |
 | spec-kit 项目文件 | `specify integration upgrade opencode`、`specify extension update <id>` | 由 `--spec-kit` 触发，需用户同意 |
 | spec-kit CLI 本体 | `specify self upgrade` | 用户决定，团队不自动执行 |
 
@@ -17,7 +17,7 @@
 ```json
 {
   "schema_version": 1,
-  "team_version": "0.1.0",
+  "team_version": "0.1.1",
   "installed_at": "...",
   "speckit_version": "1.4.5",
   "compat_range": ">=1.4.5 <2.0",
@@ -58,18 +58,19 @@ node scripts/sdd.mjs upgrade --project /path/to/project --dry-run
 确认后：
 
 ```bash
-node scripts/sdd.mjs upgrade --project /path/to/project --write
+node scripts/sdd.mjs upgrade --project /path/to/project --write --yes
 ```
 
-- 自动备份到 `.sdd/backup/upgrade-<时间>/`。
+- 自动备份到 `.sdd/backup/upgrade-<时间>/`，包含旧 `.sdd/manifest.json`。
 - 本地修改默认跳过；确认覆盖才 `--force`。
+- 如果 manifest 缺失或损坏，默认拒绝写入；`--force` 会全量备份后重装。
 - 升级后重建 manifest。
 - 运行 `sdd doctor` 和项目测试。
 
 需要 spec-kit 侧升级：
 
 ```bash
-node scripts/sdd.mjs upgrade --project /path/to/project --write --spec-kit
+node scripts/sdd.mjs upgrade --project /path/to/project --write --yes --spec-kit
 ```
 
 会执行 `specify integration upgrade opencode` 和已安装扩展的 `specify extension update`。先 dry-run，再征得用户同意。

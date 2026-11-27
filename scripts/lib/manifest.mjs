@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  assertInside,
   copyFile,
   exists,
   hashFile,
@@ -70,11 +71,26 @@ export function collectManagedEntries(teamRoot) {
   return entries;
 }
 
+export function isManagedPath(rel) {
+  const p = toPosix(rel);
+  if (!p || p.startsWith("/") || p.includes("..") || p.includes("\\")) return false;
+  if (p.startsWith(".opencode/agents/sdd/")) return p.endsWith(".md");
+  if (p.startsWith(".opencode/commands/")) return /^sdd-.*\.md$/.test(path.posix.basename(p));
+  if (p.startsWith(".opencode/skills/")) return p.startsWith(".opencode/skills/sdd-");
+  if (p.startsWith(".opencode/sdd/")) return true;
+  return false;
+}
+
+export function assertManagedPath(rel) {
+  if (!isManagedPath(rel)) throw new Error(`不是团队管理路径：${rel}`);
+  return toPosix(rel);
+}
+
 export function installTeamFiles(teamRoot, projectRoot) {
   const entries = collectManagedEntries(teamRoot);
   for (const entry of entries) {
     const src = path.join(teamRoot, entry.source);
-    const dest = path.join(projectRoot, entry.target);
+    const dest = assertInside(projectRoot, path.join(projectRoot, entry.target), "团队文件");
     copyFile(src, dest);
   }
   return entries;
@@ -119,6 +135,10 @@ export function verifyManifest(projectRoot) {
   const modified = [];
   const errors = [];
   for (const file of manifest.files ?? []) {
+    if (!isManagedPath(file.path)) {
+      errors.push(`manifest 含非管理路径：${file.path}`);
+      continue;
+    }
     const full = path.join(projectRoot, file.path);
     if (!exists(full)) {
       missing.push(file.path);
@@ -131,12 +151,31 @@ export function verifyManifest(projectRoot) {
 
 export function planUpgrade(teamRoot, projectRoot) {
   const manifest = readManifest(projectRoot);
-  const managed = new Map((manifest?.files ?? []).map((f) => [f.path, f]));
+  const managed = new Map(
+    (manifest?.files ?? [])
+      .filter((f) => isManagedPath(f.path))
+      .map((f) => [f.path, f]),
+  );
   const entries = collectManagedEntries(teamRoot);
-  const plan = { add: [], update: [], same: [], locallyModified: [], remove: [], errors: [] };
+  const plan = {
+    add: [],
+    update: [],
+    same: [],
+    locallyModified: [],
+    remove: [],
+    errors: [],
+    manifestMissing: !manifest,
+  };
   const nextTargets = new Set();
   for (const entry of entries) {
     nextTargets.add(entry.target);
+    try {
+      assertManagedPath(entry.target);
+      assertInside(projectRoot, path.join(projectRoot, entry.target), "升级目标");
+    } catch (error) {
+      plan.errors.push(error.message);
+      continue;
+    }
     const src = path.join(teamRoot, entry.source);
     const dest = path.join(projectRoot, entry.target);
     const sourceHash = hashFile(src);
@@ -163,7 +202,10 @@ export function planUpgrade(teamRoot, projectRoot) {
     }
   }
   for (const file of manifest?.files ?? []) {
-    if (!nextTargets.has(file.path)) plan.remove.push(file.path);
+    if (!nextTargets.has(file.path)) {
+      if (isManagedPath(file.path)) plan.remove.push(file.path);
+      else plan.errors.push(`manifest 含非管理路径：${file.path}`);
+    }
   }
   return plan;
 }

@@ -39,7 +39,7 @@
 
 | 字段 | 含义 |
 |---|---|
-| `phase` | `init → kickoff → specify → plan → tasks → implement → verify → accept → done`，可 `blocked` |
+| `phase` | `init → kickoff → specify → plan → tasks → implement → done`，可 `blocked`；`verify`/`accept` 是保留阶段，v1 门禁不自动进入 |
 | `gate` | `{name, status, checked_at, message}` |
 | `current_feature` | 当前 feature 目录名 |
 | `current_story` | 当前用户故事 |
@@ -131,6 +131,8 @@ planned → ready → in_progress → review → done
 
 - 只由 `sdd evidence run` 生成；手工证据不能用于 done/final。
 - 先提交再取证；`.sdd/` 自身变化不算 dirty，源码未提交才算。
+- done/final 要求 `commit` 非空、`dirty=false`、`evidence.task` 匹配、`commit === task.end_commit`、日志位于 `.sdd/evidence/<task>/` 且非空。
+- `--gate final` 允许对 `done` 任务取最终证据，绑定到最后一个任务。
 - 日志上限默认 2 MB，超出截断并标记。
 - v1 不做日志哈希；需要时可在 config 打开 `evidence.hash`（未来）。
 
@@ -149,11 +151,12 @@ reviewed_evidence: [EV-0001]
 findings: []
 ```
 
-- `kind=task`：任务评审；高风险任务 done 前必须有 pass。
-- `kind=analyze`：tasks 门前必须 pass，且无 CRITICAL/HIGH。
-- `kind=converge`：final 前必须 clean/converged。
-- `kind=final`：final 门前必须 pass。
-- P0/P1 必须 fixed；P2/P3 必须 fixed 或有 owner/due/accepted_reason。
+- `kind=task`：任务评审；高风险任务 done 前必须有 pass；`reviewed_commit` 必须等于任务 end_commit，`reviewed_evidence` 非空。
+- `kind=analyze`：tasks 门前必须 pass，且无 CRITICAL/HIGH；analyze 不要求 commit/evidence。
+- `kind=converge`：final 前必须 clean/converged；要求 `reviewed_commit` 和 `reviewed_evidence`。
+- `kind=final`：final 门前必须 pass；`reviewed_commit` 必须等于当前 HEAD。
+- P0/P1 必须 fixed/closed；P2/P3 必须 fixed/closed，或 accepted 且有 owner/due/accepted_reason。
+- severity 只接受 P0–P3（含 p0/critical 等归一化别名）；未知 severity 视为不通过。
 - 可用 `sdd review new --kind ... --task ... --verdict ...` 创建骨架，再补 findings/正文。
 
 ## 8. decision
@@ -173,7 +176,8 @@ answer: ...
 answer_kind: answer|approve|reject|accept|conditional
 ```
 
-- 门禁批准 = 该门禁存在 answered 且 `answer_kind: approve|accept` 的决策。
+- 门禁批准 = 该门禁**最新一条已回答决策**的 `answer_kind: approve|accept`；后续 reject 会撤销先前 approve。
+- 已回答决策默认不能重答；需要显式 `--reopen`。
 - lead 不能自批；`sdd decision answer` 的 shell 权限是 ask。
 
 ## 9. handoff

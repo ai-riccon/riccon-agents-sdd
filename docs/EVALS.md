@@ -1,16 +1,16 @@
 # 评测
 
-## 1. v0.1.0 验收
+## 1. v0.1.1 验收
 
 | # | 验收项 | 方式 |
 |---|---|---|
 | 1 | 源仓库检查通过 | `npm run check` |
-| 2 | 单元/集成测试通过 | `npm test`（22 个测试） |
+| 2 | 单元/集成测试通过 | `npm test`（51 个测试） |
 | 3 | dry-run init 通过 | `npm run smoke` |
 | 4 | 真实项目安装 | `sdd init <temp>` + `sdd doctor` |
 | 5 | spec-kit 1.4.5 集成 | `specify version --json`、命令/模板/脚本检查 |
 | 6 | 四道门 + 最终验收 | `tests/toy.test.mjs` |
-| 7 | 升级不覆盖状态 | `sdd upgrade --dry-run/--write` + 对比 `.sdd/state.json` |
+| 7 | 升级不覆盖状态 | `sdd upgrade --dry-run/--write --yes` + 对比 `.sdd/state.json` |
 | 8 | 默认 agent 正确 | 目标项目 `opencode.json` 的 `default_agent: sdd/lead` |
 
 ## 2. 证据等级
@@ -22,7 +22,7 @@
 | L3 | 真实项目 | 一个 greenfield MVP 走完四道门 |
 | L4 | 复现/回归 | 新会话从 handoff 恢复并继续 |
 
-v0.1.0 达到 L1 + L2 + toy L3；真实项目 L3/L4 需要在使用中积累。
+v0.1.1 达到 L1 + L2 + toy L3；真实项目 L3/L4 需要在使用中积累。
 
 ## 3. 真实项目指标
 

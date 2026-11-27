@@ -44,7 +44,13 @@ test("生成的 project/state/task/decision/review/retro/manifest/evidence 符�
   newDecision(root, { gate: "spec", question: "是否批准？", options: ["approve", "reject"] });
   check("decision", loadDecisions(root)[0]);
 
-  writeReview(root, { kind: "task", task: task.id, verdict: "pass", reviewed_evidence: ["EV-0001"] });
+  writeReview(root, {
+    kind: "task",
+    task: task.id,
+    verdict: "pass",
+    reviewed_commit: "abc123",
+    reviewed_evidence: ["EV-0001"],
+  });
   check("review", loadReviews(root)[0]);
 
   newRetro(root, { period: "milestone" });

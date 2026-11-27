@@ -102,7 +102,7 @@ specify extension update <id>         # 扩展
 团队侧：
 
 ```bash
-node scripts/sdd.mjs upgrade --project <dir> --write --spec-kit
+node scripts/sdd.mjs upgrade --project <dir> --write --yes --spec-kit
 ```
 
 顺序建议：

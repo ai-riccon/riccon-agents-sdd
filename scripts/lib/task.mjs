@@ -10,10 +10,15 @@ import {
   nowIso,
   readJson,
   readText,
+  safeTaskId,
+  validateCommitish,
   writeJson,
 } from "./util.mjs";
 import { SCHEMA_VERSION } from "./version.mjs";
 import { TASK_STATUSES, loadState, saveState, sddPath } from "./state.mjs";
+import { loadEvidence, validateEvidence } from "./evidence.mjs";
+import { latestReview, loadReview, reviewPasses } from "./review.mjs";
+import { appendEvent } from "./metrics.mjs";
 
 export const RISKS = ["low", "medium", "high"];
 
@@ -22,6 +27,7 @@ export function taskDir(projectRoot) {
 }
 
 export function taskPath(projectRoot, id) {
+  safeTaskId(id);
   return path.join(taskDir(projectRoot), `${id}.json`);
 }
 
@@ -40,6 +46,7 @@ export function loadTask(projectRoot, id) {
 }
 
 export function saveTask(projectRoot, task) {
+  safeTaskId(task.id);
   task.updated_at = nowIso();
   writeJson(taskPath(projectRoot, task.id), task);
   return task;
@@ -48,7 +55,10 @@ export function saveTask(projectRoot, task) {
 export function newTask(projectRoot, opts = {}) {
   ensureDir(taskDir(projectRoot));
   const id = opts.id ?? nextId(taskDir(projectRoot), "TASK");
+  safeTaskId(id);
   if (exists(taskPath(projectRoot, id))) throw new Error(`任务已存在：${id}`);
+  if (opts.risk !== undefined && !RISKS.includes(opts.risk)) throw new Error(`未知风险等级：${opts.risk}`);
+  const risk = opts.risk ?? "medium";
   const now = nowIso();
   const task = {
     schema_version: SCHEMA_VERSION,
@@ -59,7 +69,8 @@ export function newTask(projectRoot, opts = {}) {
     phase: opts.phase ?? null,
     story: opts.story ?? null,
     parallel: Boolean(opts.parallel),
-    risk: RISKS.includes(opts.risk) ? opts.risk : "medium",
+    risk,
+    max_risk: risk,
     owner: opts.owner ?? null,
     status: "planned",
     write_scope: opts.write_scope ?? [],
@@ -188,10 +199,38 @@ const TRANSITIONS = {
   blocked: ["planned", "ready", "in_progress"],
 };
 
+function resolveCommit(projectRoot, value, label) {
+  if (value === null || value === undefined || value === "") return null;
+  const resolved = validateCommitish(projectRoot, value);
+  if (!resolved) throw new Error(`${label} 不是合法 commit：${value}`);
+  return resolved;
+}
+
+function passingEvidenceFor(projectRoot, task, evidenceIds) {
+  const loaded = evidenceIds.map((id) => loadEvidence(projectRoot, task.id, id)).filter(Boolean);
+  return loaded.filter((ev) => validateEvidence(projectRoot, ev, { task }).ok);
+}
+
 export function updateTask(projectRoot, id, patch = {}) {
+  safeTaskId(id);
   const task = loadTask(projectRoot, id);
   if (!task) throw new Error(`找不到任务：${id}`);
   const nextStatus = patch.status;
+  const previousStatus = task.status;
+  if (patch.risk !== undefined && !RISKS.includes(patch.risk)) {
+    throw new Error(`未知风险等级：${patch.risk}`);
+  }
+  const incomingEvidence = Array.from(new Set([
+    ...(patch.evidence ?? []),
+    ...(patch.add_evidence ?? []),
+  ]));
+  if (patch.baseline_commit !== undefined) {
+    task.baseline_commit = resolveCommit(projectRoot, patch.baseline_commit, "baseline_commit");
+  }
+  if (patch.end_commit !== undefined) {
+    task.end_commit = resolveCommit(projectRoot, patch.end_commit, "end_commit");
+  }
+
   if (nextStatus && nextStatus !== task.status) {
     if (!TASK_STATUSES.includes(nextStatus)) throw new Error(`未知任务状态：${nextStatus}`);
     const allowed = TRANSITIONS[task.status] ?? [];
@@ -200,33 +239,58 @@ export function updateTask(projectRoot, id, patch = {}) {
     }
     if (nextStatus === "in_progress") {
       if (!patch.owner && !task.owner) throw new Error(`${id} 进入 in_progress 前必须有 owner`);
-      if (!task.baseline_commit) task.baseline_commit = patch.baseline_commit ?? gitHead(projectRoot);
+      if (!task.baseline_commit) task.baseline_commit = gitHead(projectRoot);
       if (!task.baseline_commit) throw new Error(`${id} 进入 in_progress 前必须有 baseline_commit（项目需要至少一次 git commit）`);
       if (!task.write_scope?.length) throw new Error(`${id} 进入 in_progress 前必须有 write_scope`);
     }
-    const incomingEvidence = [...(patch.evidence ?? []), ...(patch.add_evidence ?? [])];
     if (nextStatus === "review") {
       if (!(incomingEvidence.length || task.evidence?.length)) throw new Error(`${id} 进入 review 前必须有至少一条证据`);
-      if (!task.end_commit) task.end_commit = patch.end_commit ?? gitHead(projectRoot);
+      if (!task.end_commit) task.end_commit = gitHead(projectRoot);
+      if (!task.end_commit) throw new Error(`${id} 进入 review 前必须有 end_commit`);
     }
     if (nextStatus === "done") {
-      if (!(task.evidence?.length || incomingEvidence.length)) throw new Error(`${id} 标记 done 前必须有至少一条证据`);
-      if (task.risk === "high" && !(patch.review ?? task.review)) throw new Error(`${id} 是高风险任务，done 前必须有独立评审`);
-      if (!task.end_commit) task.end_commit = patch.end_commit ?? gitHead(projectRoot);
+      if (!task.end_commit) task.end_commit = gitHead(projectRoot);
+      if (!task.end_commit) throw new Error(`${id} 标记 done 前必须有 end_commit`);
+      const evidenceIds = Array.from(new Set([...(task.evidence ?? []), ...incomingEvidence]));
+      if (!evidenceIds.length) throw new Error(`${id} 标记 done 前必须有至少一条证据`);
+      const passing = passingEvidenceFor(projectRoot, task, evidenceIds);
+      if (!passing.length) throw new Error(`${id} 没有通过校验的证据（commit/日志/exit/dirty 任一不满足）`);
+      const maxRisk = task.max_risk ?? task.risk;
+      if (maxRisk === "high") {
+        const reviewId = patch.review ?? task.review;
+        const review = reviewId ? loadReview(projectRoot, reviewId) : latestReview(projectRoot, { kind: "task", task: id });
+        if (!reviewPasses(review, { task })) {
+          throw new Error(`${id} 是高风险任务，done 前必须有独立且绑定 commit/证据的 task review`);
+        }
+      }
     }
   }
+
   for (const key of [
     "owner", "title", "feature", "phase", "story", "parallel", "risk",
-    "write_scope", "acceptance", "verify", "depends_on", "baseline_commit",
-    "end_commit", "status", "notes",
+    "write_scope", "acceptance", "verify", "depends_on", "status", "notes",
   ]) {
     if (patch[key] !== undefined) task[key] = patch[key];
   }
-  if (patch.add_evidence) {
-    task.evidence = Array.from(new Set([...(task.evidence ?? []), ...patch.add_evidence]));
+  if (patch.risk !== undefined) {
+    task.max_risk = RISKS[Math.max(RISKS.indexOf(task.max_risk ?? "low"), RISKS.indexOf(patch.risk))];
+  }
+  if (incomingEvidence.length) {
+    task.evidence = Array.from(new Set([...(task.evidence ?? []), ...incomingEvidence]));
   }
   if (patch.review !== undefined) task.review = patch.review;
-  return saveTask(projectRoot, task);
+
+  const saved = saveTask(projectRoot, task);
+  if (nextStatus && nextStatus !== previousStatus) {
+    if (nextStatus === "in_progress") {
+      appendEvent(projectRoot, "task_started", { task: id });
+    } else if (nextStatus === "done") {
+      appendEvent(projectRoot, "task_done", { task: id });
+    } else if (previousStatus === "review" && nextStatus === "in_progress") {
+      appendEvent(projectRoot, "task_rework", { task: id });
+    }
+  }
+  return saved;
 }
 
 export function taskScopeViolations(projectRoot, id, { base = null, head = null } = {}) {
@@ -234,10 +298,15 @@ export function taskScopeViolations(projectRoot, id, { base = null, head = null 
   if (!task) throw new Error(`找不到任务：${id}`);
   const from = base ?? task.baseline_commit;
   const to = head ?? task.end_commit ?? gitHead(projectRoot);
-  if (!from || !to) return { checked: false, violations: [], reason: "缺少 baseline/end commit" };
-  const files = gitDiffNames(from, to, projectRoot);
-  const violations = files.filter((file) => !matchesScope(file, task.write_scope));
-  return { checked: true, base: from, head: to, files, violations };
+  if (!from || !to) return { checked: false, violations: [], files: [], reason: "缺少 baseline/end commit" };
+  try {
+    // .sdd/ 是团队账本，不属于任务源码 scope。
+    const files = gitDiffNames(from, to, projectRoot).filter((file) => !file.startsWith(".sdd/"));
+    const violations = files.filter((file) => !matchesScope(file, task.write_scope));
+    return { checked: true, base: from, head: to, files, violations };
+  } catch (error) {
+    return { checked: false, violations: [], files: [], reason: error.message };
+  }
 }
 
 export function taskStats(projectRoot) {

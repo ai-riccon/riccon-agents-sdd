@@ -14,6 +14,7 @@
     "story": { "type": ["string", "null"] },
     "parallel": { "type": "boolean" },
     "risk": { "enum": ["low", "medium", "high"] },
+    "max_risk": { "enum": ["low", "medium", "high"] },
     "owner": { "type": ["string", "null"] },
     "status": { "enum": ["planned", "ready", "in_progress", "review", "done", "blocked"] },
     "write_scope": { "type": "array", "items": { "type": "string" } },

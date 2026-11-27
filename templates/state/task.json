@@ -11,13 +11,13 @@
   "owner": "sdd/builder",
   "status": "planned",
   "write_scope": [
-    "src/example.ts"
+    "path/to/module"
   ],
   "acceptance": [
     "可观察、可测试的验收标准"
   ],
   "verify": [
-    "npm test -- example"
+    "<项目合同中的验证命令>"
   ],
   "depends_on": [],
   "baseline_commit": null,

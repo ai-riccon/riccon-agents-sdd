@@ -13,9 +13,15 @@ export function agentPath(teamRoot, role) {
 }
 
 export function loadAgentConfig(runtimeRoot) {
-  const permissions = readYaml(path.join(runtimeRoot, "templates", "agents", "permissions.yml"), {});
-  const models = readYaml(path.join(runtimeRoot, "templates", "agents", "models.yml"), {});
-  return { permissions, models };
+  const permissionsPath = path.join(runtimeRoot, "templates", "agents", "permissions.yml");
+  const modelsPath = path.join(runtimeRoot, "templates", "agents", "models.yml");
+  if (!exists(permissionsPath) || !exists(modelsPath)) {
+    throw new Error("缺少 templates/agents/permissions.yml 或 models.yml");
+  }
+  return {
+    permissions: readYaml(permissionsPath),
+    models: readYaml(modelsPath),
+  };
 }
 
 export function permissionsFor(role, permissions) {

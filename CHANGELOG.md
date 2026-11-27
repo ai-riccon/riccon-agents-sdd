@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.1 — 2026-11-27
+
+安全与门禁加固，修复 0.1.0 全量评审的 P0/P1。
+
+### 修复
+
+- 证据绑定 commit/task/日志目录；dirty、commit 不匹配、日志越界不能 done/final。
+- review severity 白名单；缺 commit/evidence 的 final/converge 不通过；findings 结构化。
+- 批准语义改为“最新已回答决策”，reject 撤销 approve；已回答决策不能静默重答。
+- builder/product/architect/ops 禁止写 `.sdd/reviews/**`；子代理写操作 shell ask。
+- ID 白名单、git commit 校验、manifest 路径限定；重复 init 默认拒绝，`--force` 先备份。
+- 升级备份包含旧 manifest；manifest 缺失默认拒绝写入。
+- `--write` 需要 `--yes`；布尔旗标显式解析；evidence argv 保留引号；超时杀进程树。
+- 门禁顺序校验，phase 只前进；final 纳入 scope 检查；风险降级保留 max_risk。
+- metrics 补 gate/task 事件；init 写 `.gitattributes`；CI 加 smoke。
+
+### 测试
+
+- 51 个 `node:test`，覆盖 toy E2E、证据绑定、scope、升级/回滚、权限、schema、review findings、路径穿越、批准撤销、门禁顺序、final scope、超时。
+
 ## 0.1.0 — 2026-11-27
 
 首个可运行版本。
@@ -15,8 +35,8 @@
 - CLI：init、doctor、status、upgrade、state validate、task new/sync/list/show/update/scope、evidence run/list、gate check、review new/list/show、decision new/answer/list/show、handoff new/list、retro new、metrics、compat check、version。
 - 团队升级：manifest/hash、dry-run、备份、本地修改冲突处理、spec-kit 侧升级开关。
 - spec-kit 兼容：`>=1.4.5 <2.0`，检查必需命令/模板/脚本/扩展。
-- 测试：22 个 `node:test`，覆盖 toy E2E、任务生命周期、证据、scope、升级、兼容、权限同步、schema、review findings；`npm test` / `npm run check` / `npm run smoke`。
 - 文档：设计、工作流、状态、权限、模型、升级、兼容、评测。
+- 测试：22 个 `node:test`，覆盖 toy E2E、任务生命周期、证据、scope、升级、兼容、权限同步、schema、review findings。
 
 ### 已知限制
 

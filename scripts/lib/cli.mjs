@@ -7,7 +7,7 @@ import { checkSpeckit } from "./compat.mjs";
 import { doctor, formatDoctor } from "./doctor.mjs";
 import { initProject } from "./init.mjs";
 import { upgradeProject } from "./upgrade.mjs";
-import { loadState, statusSummary, validateState } from "./state.mjs";
+import { statusSummary, validateState } from "./state.mjs";
 import {
   listTasks, loadTask, newTask, syncTasks, taskScopeViolations, updateTask,
 } from "./task.mjs";
@@ -85,6 +85,10 @@ function listOption(value) {
   if (Array.isArray(value)) return value;
   if (value === true || value === undefined || value === null || value === "") return [];
   return String(value).split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+}
+
+function toBool(value) {
+  return value === true || value === "true" || value === "1" || value === "yes";
 }
 
 function print(value) {
@@ -168,10 +172,10 @@ async function main(argv) {
     if (!sourceMode) throw new Error("请在 Riccon SDD 源仓库运行 sdd init（当前是已安装 runtime）。");
     const target = positional[1] ?? options.project ?? process.cwd();
     const result = await initProject(target, runtimeRoot, {
-      force: options.force !== false,
-      noGit: Boolean(options["no-git"]),
-      noDefaultAgent: Boolean(options["no-default-agent"]),
-      dryRun: Boolean(options["dry-run"]),
+      force: toBool(options.force),
+      noGit: toBool(options["no-git"]),
+      noDefaultAgent: toBool(options["no-default-agent"]),
+      dryRun: toBool(options["dry-run"]),
     });
     if (result.dryRun) {
       console.log(`[dry-run] ${result.projectRoot}`);
@@ -207,11 +211,15 @@ async function main(argv) {
   if (command === "upgrade") {
     if (!sourceMode) throw new Error("请在 Riccon SDD 源仓库运行 sdd upgrade --project <目标项目>。");
     const ctx = context(options);
+    const write = toBool(options.write) && !toBool(options["dry-run"]);
+    if (write && !toBool(options.yes)) {
+      throw new Error("写入升级需要显式 --yes（先跑 --dry-run 检查差异）。");
+    }
     const result = await upgradeProject(ctx.projectRoot, runtimeRoot, {
-      write: Boolean(options.write),
-      dryRun: !options.write,
-      force: Boolean(options.force),
-      specKit: Boolean(options["spec-kit"]),
+      write,
+      dryRun: !write,
+      force: toBool(options.force),
+      specKit: toBool(options["spec-kit"]),
     });
     if (result.dryRun) {
       console.log(`[dry-run] ${ctx.projectRoot}`);
@@ -220,12 +228,16 @@ async function main(argv) {
       for (const p of result.plan.update) console.log(`~ ${p}`);
       for (const p of result.plan.remove) console.log(`- ${p}`);
       for (const p of result.plan.locallyModified) console.log(`! ${p}（本地修改，需 --force）`);
+      for (const e of result.errors) console.log(`✗ ${e}`);
+      if (!result.ok) process.exitCode = 1;
       return;
     }
     console.log(`已升级 ${ctx.projectRoot}`);
     console.log(`新增 ${result.applied.add.length}，更新 ${result.applied.update.length}，跳过 ${result.applied.skipped.length}，删除 ${result.applied.removed.length}`);
     if (result.backupDir) console.log(`备份：${result.backupDir}`);
     for (const item of result.specKit) console.log(`spec-kit: ${item.command}（exit ${item.code}）`);
+    for (const e of result.errors) console.log(`✗ ${e}`);
+    if (!result.ok || result.specKit.some((item) => item.code !== 0)) process.exitCode = 1;
     return;
   }
 
@@ -302,7 +314,7 @@ async function main(argv) {
         }
       }
       if (options["add-evidence"] !== undefined) patch.add_evidence = listOption(options["add-evidence"]);
-      if (options.parallel !== undefined) patch.parallel = true;
+      if (options.parallel !== undefined) patch.parallel = toBool(options.parallel);
       const task = updateTask(ctx.projectRoot, id, patch);
       console.log(`${task.id} 已更新为 ${task.status}`);
       return;
@@ -311,7 +323,11 @@ async function main(argv) {
       const id = positional[2];
       if (!id) throw new Error("用法：sdd task scope TASK-0001");
       const result = taskScopeViolations(ctx.projectRoot, id);
-      if (!result.checked) { console.log(`无法检查：${result.reason}`); return; }
+      if (!result.checked) {
+        console.log(`无法检查：${result.reason}`);
+        process.exitCode = 1;
+        return;
+      }
       if (!result.violations.length) {
         console.log(`✓ ${id} scope 通过（${result.files.length} 个文件）`);
       } else {
@@ -331,9 +347,10 @@ async function main(argv) {
         taskId: options.task,
         agent: options.agent,
         command: commandArgs.join(" "),
+        argv: commandArgs,
         cwd: options.cwd ? path.resolve(options.cwd) : ctx.projectRoot,
         gate: options.gate ?? null,
-        allowDirty: Boolean(options["allow-dirty"]),
+        allowDirty: toBool(options["allow-dirty"]),
         timeoutMs: options.timeout ? Number(options.timeout) : 0,
       });
       console.log(`证据 ${evidence.id} 已记录：exit ${evidence.exit_code}，${evidence.duration_ms}ms`);
@@ -363,6 +380,14 @@ async function main(argv) {
   if (command === "review") {
     const ctx = requireProject(options);
     if (sub === "new") {
+      let findings = [];
+      if (options.findings) {
+        try {
+          findings = JSON.parse(options.findings);
+        } catch (error) {
+          throw new Error(`--findings 必须是 JSON 数组：${error.message}`);
+        }
+      }
       const review = writeReview(ctx.projectRoot, {
         kind: options.kind,
         task: options.task ?? null,
@@ -370,10 +395,11 @@ async function main(argv) {
         feature: options.feature ?? null,
         reviewer: options.reviewer ?? "sdd/verifier",
         session: options.session ?? null,
-        verdict: options.verdict ?? "pass",
-        independent: options.independent === "false" ? false : true,
+        verdict: options.verdict,
+        independent: options.independent === undefined ? true : toBool(options.independent),
         reviewed_commit: options["reviewed-commit"] ?? null,
         reviewed_evidence: listOption(options["reviewed-evidence"]),
+        findings,
         body: options.body,
       });
       console.log(`${review.id} 已创建（kind=${review.kind}，verdict=${review.verdict}）`);
@@ -420,6 +446,7 @@ async function main(argv) {
         answer: options.answer,
         kind: options.kind ?? "answer",
         owner: options.owner ?? "user",
+        reopen: toBool(options.reopen),
       });
       console.log(`${decision.id} 已回答：${decision.answer_kind}`);
       return;
@@ -470,6 +497,12 @@ async function main(argv) {
       proposals: listOption(options.proposals),
     });
     console.log(`${retro.id} 已创建`);
+    return;
+  }
+
+  if (command === "retro" && sub === "list") {
+    const ctx = requireProject(options);
+    for (const retro of listRetros(ctx.projectRoot)) console.log(`${retro.id}  ${retro.period}  ${retro.created_at ?? ""}`);
     return;
   }
 

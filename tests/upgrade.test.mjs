@@ -54,4 +54,34 @@ test("升级写入会备份并更新未修改文件", async () => {
   assert.match(updated, /x = 2/);
   const verify = verifyManifest(target);
   assert.ok(verify.modified.includes(".opencode/agents/sdd/lead.md"));
+  assert.ok(fs.existsSync(path.join(result.backupDir, ".sdd", "manifest.json")));
+});
+
+test("升级 --force 覆盖本地修改并移除旧文件", async () => {
+  const src = makeSource();
+  const target = makeTarget();
+  installTeamFiles(src, target);
+  writeManifest(target, buildManifest(src, target, { team_version: "0.1.0" }));
+  writeText(path.join(target, ".opencode", "agents", "sdd", "lead.md"), "# Lead local\n");
+  fs.rmSync(path.join(src, "scripts", "lib", "x.mjs"));
+  const { upgradeProject } = await import("../scripts/lib/upgrade.mjs");
+  const result = await upgradeProject(target, src, { write: true, force: true });
+  assert.equal(result.ok, true);
+  assert.equal(fs.readFileSync(path.join(target, ".opencode", "agents", "sdd", "lead.md"), "utf8"), "# Lead v1\n");
+  assert.equal(fs.existsSync(path.join(target, ".opencode", "sdd", "scripts", "lib", "x.mjs")), false);
+  assert.ok(result.applied.removed.includes(".opencode/sdd/scripts/lib/x.mjs"));
+});
+
+test("manifest 缺失时拒绝写入，--force 才允许", async () => {
+  const src = makeSource();
+  const target = makeTarget();
+  installTeamFiles(src, target);
+  const { upgradeProject } = await import("../scripts/lib/upgrade.mjs");
+  const refused = await upgradeProject(target, src, { write: true, force: false });
+  assert.equal(refused.ok, false);
+  assert.ok(refused.errors.some((e) => e.includes("manifest")));
+  const forced = await upgradeProject(target, src, { write: true, force: true });
+  assert.equal(forced.ok, true);
+  assert.ok(forced.backupDir);
+  assert.ok(readManifest(target));
 });

@@ -102,20 +102,24 @@ export function writeAnalyzeReview(root) {
   });
 }
 
-export function writeConvergeReview(root) {
+export function writeConvergeReview(root, { reviewed_commit, reviewed_evidence = [] } = {}) {
   return writeReview(root, {
     kind: "converge",
     verdict: "clean",
     independent: true,
+    reviewed_commit,
+    reviewed_evidence,
     body: "# Converge\n\nConverged.\n",
   });
 }
 
-export function writeFinalReview(root) {
+export function writeFinalReview(root, { reviewed_commit, reviewed_evidence = [] } = {}) {
   return writeReview(root, {
     kind: "final",
     verdict: "pass",
     independent: true,
+    reviewed_commit,
+    reviewed_evidence,
     body: "# Final\n\nPass.\n",
   });
 }

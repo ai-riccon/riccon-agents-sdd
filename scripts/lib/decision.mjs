@@ -7,16 +7,18 @@ import {
   nowIso,
   parseFrontMatter,
   readText,
+  safeDecisionId,
   stringifyFrontMatter,
   writeText,
 } from "./util.mjs";
-import { setApproval, sddPath } from "./state.mjs";
+import { GATES, setApproval, sddPath } from "./state.mjs";
 
 export function decisionDir(projectRoot) {
   return sddPath(projectRoot, "decisions");
 }
 
 export function decisionPath(projectRoot, id) {
+  safeDecisionId(id);
   return path.join(decisionDir(projectRoot), `${id}.md`);
 }
 
@@ -27,9 +29,10 @@ export function listDecisions(projectRoot) {
     .filter((name) => /^DEC-\d+\.md$/.test(name))
     .sort()
     .map((name) => {
-      const text = readText(path.join(dir, name), "");
+      const full = path.join(dir, name);
+      const text = readText(full, "");
       const { data, body } = parseFrontMatter(text);
-      return { ...data, body, file: name };
+      return { ...data, body, file: name, mtime_ms: fs.statSync(full).mtimeMs };
     });
 }
 
@@ -40,9 +43,17 @@ export function loadDecision(projectRoot, id) {
   return { ...data, body, file: path.basename(p) };
 }
 
+function assertGate(gate) {
+  if (gate !== null && gate !== undefined && !GATES.includes(gate)) {
+    throw new Error(`未知门禁：${gate}；可用：${GATES.join(", ")}`);
+  }
+}
+
 export function newDecision(projectRoot, opts = {}) {
   ensureDir(decisionDir(projectRoot));
+  assertGate(opts.gate ?? null);
   const id = opts.id ?? nextId(decisionDir(projectRoot), "DEC");
+  safeDecisionId(id);
   const data = {
     schema_version: 1,
     id,
@@ -86,12 +97,22 @@ ${data.deadline || "（未设置）"}
   return { ...data, body };
 }
 
-export function answerDecision(projectRoot, id, { answer, kind = "answer", owner = "user" } = {}) {
+export function answerDecision(projectRoot, id, {
+  answer,
+  kind = "answer",
+  owner = "user",
+  reopen = false,
+} = {}) {
+  safeDecisionId(id);
   const decision = loadDecision(projectRoot, id);
   if (!decision) throw new Error(`找不到决策：${id}`);
   if (!answer) throw new Error("缺少 --answer");
   if (!["answer", "approve", "reject", "accept", "conditional"].includes(kind)) {
     throw new Error(`未知 answer kind：${kind}`);
+  }
+  assertGate(decision.gate ?? null);
+  if (decision.status !== "open" && !reopen) {
+    throw new Error(`决策 ${id} 已经是 ${decision.status}；需要重开请显式使用 --reopen`);
   }
   const data = {
     ...decision,
@@ -111,15 +132,22 @@ export function answerDecision(projectRoot, id, { answer, kind = "answer", owner
   return loadDecision(projectRoot, id);
 }
 
-export function latestGateDecision(projectRoot, gate, { approvedOnly = true } = {}) {
-  const decisions = listDecisions(projectRoot)
-    .filter((d) => d.gate === gate)
-    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  if (!decisions.length) return null;
-  const answered = decisions.filter((d) => d.status === "answered");
-  const approve = answered.filter((d) => d.answer_kind === "approve" || d.answer_kind === "accept");
-  if (approvedOnly) return approve.length ? approve[approve.length - 1] : null;
-  return answered.length ? answered[answered.length - 1] : decisions[decisions.length - 1];
+export function latestGateDecision(projectRoot, gate) {
+  assertGate(gate);
+  const answers = listDecisions(projectRoot)
+    .filter((d) => d.gate === gate && d.status === "answered")
+    .sort((a, b) => {
+      const byTime = String(a.answered_at ?? a.created_at ?? "").localeCompare(String(b.answered_at ?? b.created_at ?? ""));
+      if (byTime !== 0) return byTime;
+      const byMtime = (a.mtime_ms ?? 0) - (b.mtime_ms ?? 0);
+      return byMtime !== 0 ? byMtime : String(a.id).localeCompare(String(b.id));
+    });
+  return answers.length ? answers[answers.length - 1] : null;
+}
+
+export function gateApproved(projectRoot, gate) {
+  const decision = latestGateDecision(projectRoot, gate);
+  return Boolean(decision && (decision.answer_kind === "approve" || decision.answer_kind === "accept"));
 }
 
 export function openBlockingDecisions(projectRoot) {

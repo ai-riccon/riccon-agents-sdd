@@ -5,13 +5,14 @@ import {
   ensureDir,
   exists,
   gitHead,
-  readJson,
   readText,
   timestampForFile,
   writeJson,
   writeText,
 } from "./util.mjs";
-import { buildManifest, installTeamFiles, writeManifest } from "./manifest.mjs";
+import {
+  buildManifest, collectManagedEntries, installTeamFiles, writeManifest,
+} from "./manifest.mjs";
 import { initProjectState } from "./state.mjs";
 import { getSpeckitVersion, loadCompat } from "./compat.mjs";
 import {
@@ -27,9 +28,16 @@ function replacePlaceholders(text, values) {
   return text.replace(/\{\{([A-Z_]+)\}\}/g, (_, key) => values[key] ?? `{{${key}}}`);
 }
 
-function mergeOpencode(projectRoot, { noDefaultAgent = false } = {}) {
+export function mergeOpencode(projectRoot, { noDefaultAgent = false } = {}) {
   const file = path.join(projectRoot, "opencode.json");
-  const existing = readJson(file, null);
+  let existing = null;
+  if (exists(file)) {
+    try {
+      existing = JSON.parse(readText(file, ""));
+    } catch (error) {
+      throw new Error(`opencode.json 不是合法 JSON，拒绝覆盖：${error.message}`);
+    }
+  }
   const config = existing ?? { "$schema": "https://opencode.ai/config.json" };
   if (!config.$schema) config.$schema = "https://opencode.ai/config.json";
   if (!noDefaultAgent) config.default_agent = "sdd/lead";
@@ -39,6 +47,18 @@ function mergeOpencode(projectRoot, { noDefaultAgent = false } = {}) {
   }
   writeJson(file, config);
   return { file, created: !existing, default_agent: config.default_agent ?? null };
+}
+
+function backupTeamFiles(teamRoot, projectRoot, backupDir) {
+  const entries = collectManagedEntries(teamRoot);
+  for (const entry of entries) {
+    const src = path.join(projectRoot, entry.target);
+    if (!exists(src)) continue;
+    const dest = path.join(backupDir, entry.target);
+    ensureDir(path.dirname(dest));
+    copyFile(src, dest);
+  }
+  return entries.length;
 }
 
 function writeAgentsMd(projectRoot, teamRoot, projectName) {
@@ -60,6 +80,13 @@ function writeAgentsMd(projectRoot, teamRoot, projectName) {
   return { file: target, action: "appended-managed-blocks" };
 }
 
+function ensureGitattributes(projectRoot) {
+  const file = path.join(projectRoot, ".gitattributes");
+  if (exists(file)) return false;
+  writeText(file, "* text=auto eol=lf\n");
+  return true;
+}
+
 function ensureGitignore(projectRoot) {
   const file = path.join(projectRoot, ".gitignore");
   const current = exists(file) ? readText(file, "") : "";
@@ -73,7 +100,7 @@ function ensureGitignore(projectRoot) {
 }
 
 export async function initProject(projectRoot, teamRoot, {
-  force = true,
+  force = false,
   noGit = false,
   noDefaultAgent = false,
   dryRun = false,
@@ -97,6 +124,17 @@ export async function initProject(projectRoot, teamRoot, {
   }
 
   ensureDir(root);
+  const alreadyInitialized = exists(path.join(root, ".sdd", "state.json"));
+  if (alreadyInitialized && !force) {
+    throw new Error("项目已初始化（存在 .sdd/state.json）；请使用 sdd upgrade；如确需重装，显式加 --force。");
+  }
+  if (alreadyInitialized && force) {
+    const backupDir = path.join(root, ".sdd", "backup", `reinit-${timestampForFile()}`);
+    ensureDir(backupDir);
+    const count = backupTeamFiles(teamRoot, root, backupDir);
+    actions.push(`已备份团队文件 ${count} 个到 ${path.relative(root, backupDir)}`);
+  }
+
   let didGitInit = false;
   if (!noGit && !exists(path.join(root, ".git"))) {
     const init = spawnSync("git", ["init", "-q"], { cwd: root, encoding: "utf8" });
@@ -105,7 +143,7 @@ export async function initProject(projectRoot, teamRoot, {
     actions.push("git init");
   }
 
-  const speckit = initSpecify(root, { force });
+  const speckit = initSpecify(root, { force: true });
   actions.push(speckit.skipped ? "spec-kit 已初始化，跳过" : `specify init（exit ${speckit.code}）`);
   if (!speckit.skipped && speckit.code !== 0) {
     throw new Error(`specify init 失败：${speckit.stderr || speckit.stdout}`);
@@ -123,9 +161,6 @@ export async function initProject(projectRoot, teamRoot, {
     actions.push("配置 git 扩展：auto-commit 关闭");
   }
 
-  if (exists(path.join(root, ".sdd", "state.json"))) {
-    actions.push("警告：项目已初始化；本次会覆盖团队管理文件，建议改用 sdd upgrade");
-  }
   const entries = installTeamFiles(teamRoot, root);
   actions.push(`安装团队文件 ${entries.length} 个`);
 
@@ -145,6 +180,7 @@ export async function initProject(projectRoot, teamRoot, {
   writeManifest(root, manifest);
   actions.push(`写入 .sdd/ 状态与 manifest（${manifest.files.length} 个团队文件）`);
 
+  if (ensureGitattributes(root)) actions.push("写入 .gitattributes（LF 归一化）");
   const ignored = ensureGitignore(root);
   if (ignored.length) actions.push(`更新 .gitignore：${ignored.join(", ")}`);
 

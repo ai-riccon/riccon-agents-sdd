@@ -143,6 +143,76 @@ export function toPosix(p) {
   return String(p).replace(/\\/g, "/");
 }
 
+export const ID_PATTERNS = {
+  task: /^TASK-\d{4,}$/,
+  evidence: /^EV-\d{4,}$/,
+  decision: /^DEC-\d{4,}$/,
+  review: /^(REV-[A-Z0-9-]+|ANALYZE-\d+|CONVERGE-\d+|FINAL-\d+)$/,
+  handoff: /^HANDOFF-\d{4,}$/,
+};
+
+export function assertSafeId(value, pattern, label = "ID") {
+  if (typeof value !== "string" || !pattern.test(value)) {
+    throw new Error(`${label} 非法：${String(value)}`);
+  }
+  return value;
+}
+
+export function safeTaskId(value) {
+  return assertSafeId(value, ID_PATTERNS.task, "任务 ID");
+}
+
+export function safeEvidenceId(value) {
+  return assertSafeId(value, ID_PATTERNS.evidence, "证据 ID");
+}
+
+export function safeDecisionId(value) {
+  return assertSafeId(value, ID_PATTERNS.decision, "决策 ID");
+}
+
+export function safeReviewId(value) {
+  return assertSafeId(value, ID_PATTERNS.review, "评审 ID");
+}
+
+export function safeHandoffId(value) {
+  return assertSafeId(value, ID_PATTERNS.handoff, "handoff ID");
+}
+
+export function assertInside(base, target, label = "路径") {
+  const baseResolved = path.resolve(base);
+  const targetResolved = path.resolve(target);
+  const rel = path.relative(baseResolved, targetResolved);
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`${label} 越界：${targetResolved}`);
+  }
+  return targetResolved;
+}
+
+export function assertInsideOrEqual(base, target, label = "路径") {
+  const baseResolved = path.resolve(base);
+  const targetResolved = path.resolve(target);
+  const rel = path.relative(baseResolved, targetResolved);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error(`${label} 越界：${targetResolved}`);
+  }
+  return targetResolved;
+}
+
+export function isInside(base, target) {
+  try {
+    assertInside(base, target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function validateCommitish(cwd, value) {
+  if (typeof value !== "string" || !value || value.startsWith("-")) return null;
+  const r = git(["rev-parse", "--verify", "--quiet", `${value}^{commit}`], cwd);
+  return r.code === 0 && r.stdout ? r.stdout : null;
+}
+
 export function relativePosix(from, to) {
   return toPosix(path.relative(from, to));
 }
@@ -184,7 +254,27 @@ export function matchesScope(file, scopes) {
   return false;
 }
 
-export function runProcess(command, { cwd = process.cwd(), timeoutMs = 0, maxBytes = 2 * 1024 * 1024 } = {}) {
+function quoteWinArg(value) {
+  const s = String(value);
+  if (s === "") return '""';
+  if (!/[\s"&|<>^()%!]/.test(s)) return s;
+  return `"${s.replace(/"/g, '\\"')}"`;
+}
+
+function killTree(child) {
+  if (!child?.pid) return;
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true });
+    return;
+  }
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch {
+    try { child.kill("SIGKILL"); } catch { /* ignore */ }
+  }
+}
+
+function runProcessInternal({ command, program, args, cwd, timeoutMs, maxBytes }) {
   return new Promise((resolve) => {
     const startedAt = nowIso();
     const start = Date.now();
@@ -192,23 +282,64 @@ export function runProcess(command, { cwd = process.cwd(), timeoutMs = 0, maxByt
     let stderr = "";
     let bytes = 0;
     let truncated = false;
+    let timedOut = false;
+    let settled = false;
     let child;
+    let timer;
+    let fallbackTimer;
+
+    const finish = (payload) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      resolve(payload);
+    };
+
+    const result = (code, signal) => ({
+      exitCode: code ?? (signal ? 1 : 0),
+      signal: signal ?? null,
+      stdout,
+      stderr,
+      durationMs: Date.now() - start,
+      startedAt,
+      finishedAt: nowIso(),
+      bytes,
+      truncated,
+      timedOut,
+    });
+
     try {
-      child = spawn(command, { cwd, shell: true, windowsHide: true, env: process.env });
+      if (program) {
+        if (process.platform === "win32" && !/\.exe$/i.test(program)) {
+          const line = [program, ...args].map(quoteWinArg).join(" ");
+          child = spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", line], {
+            cwd,
+            windowsHide: true,
+            env: process.env,
+          });
+        } else {
+          child = spawn(program, args, {
+            cwd,
+            windowsHide: true,
+            env: process.env,
+            detached: process.platform !== "win32",
+          });
+        }
+      } else {
+        child = spawn(command, {
+          cwd,
+          shell: true,
+          windowsHide: true,
+          env: process.env,
+          detached: process.platform !== "win32",
+        });
+      }
     } catch (err) {
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout,
-        stderr: String(err),
-        durationMs: Date.now() - start,
-        startedAt,
-        finishedAt: nowIso(),
-        bytes,
-        truncated,
-      });
+      finish(result(1, null));
       return;
     }
+
     const append = (chunk, target) => {
       const text = chunk.toString("utf8");
       bytes += Buffer.byteLength(text);
@@ -221,41 +352,30 @@ export function runProcess(command, { cwd = process.cwd(), timeoutMs = 0, maxByt
     };
     child.stdout?.on("data", (chunk) => append(chunk, "out"));
     child.stderr?.on("data", (chunk) => append(chunk, "err"));
-    let timer;
+
     if (timeoutMs > 0) {
       timer = setTimeout(() => {
-        try { child.kill(); } catch { /* ignore */ }
+        timedOut = true;
+        killTree(child);
+        // 某些平台孙进程持有管道时 close 不会触发；兜底返回。
+        fallbackTimer = setTimeout(() => finish(result(1, "TIMEOUT")), 3000);
       }, timeoutMs);
     }
-    child.on("close", (code, signal) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        exitCode: code ?? (signal ? 1 : 0),
-        signal: signal ?? null,
-        stdout,
-        stderr,
-        durationMs: Date.now() - start,
-        startedAt,
-        finishedAt: nowIso(),
-        bytes,
-        truncated,
-      });
-    });
+
+    child.on("close", (code, signal) => finish(result(code, signal)));
     child.on("error", (err) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout,
-        stderr: `${stderr}${String(err)}`,
-        durationMs: Date.now() - start,
-        startedAt,
-        finishedAt: nowIso(),
-        bytes,
-        truncated,
-      });
+      stderr += String(err);
+      finish(result(1, null));
     });
   });
+}
+
+export function runProcess(command, { cwd = process.cwd(), timeoutMs = 0, maxBytes = 2 * 1024 * 1024 } = {}) {
+  return runProcessInternal({ command, cwd, timeoutMs, maxBytes });
+}
+
+export function runProcessArgv(program, args, { cwd = process.cwd(), timeoutMs = 0, maxBytes = 2 * 1024 * 1024 } = {}) {
+  return runProcessInternal({ program, args, cwd, timeoutMs, maxBytes });
 }
 
 export function git(args, cwd = process.cwd()) {
@@ -289,8 +409,13 @@ export function gitIsClean(cwd = process.cwd()) {
 }
 
 export function gitDiffNames(base, head, cwd = process.cwd()) {
-  const r = git(["diff", "--name-only", `${base}..${head}`], cwd);
-  if (r.code !== 0) return [];
+  const baseCommit = validateCommitish(cwd, base);
+  const headCommit = validateCommitish(cwd, head);
+  if (!baseCommit || !headCommit) {
+    throw new Error(`非法 commit：${base}..${head}`);
+  }
+  const r = git(["diff", "--name-only", baseCommit, headCommit, "--"], cwd);
+  if (r.code !== 0) throw new Error(`git diff 失败：${r.stderr || r.stdout}`);
   return r.stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).map(toPosix);
 }
 

@@ -24,6 +24,33 @@ test("lead 可 spawn sdd/*，子代理禁止 question/subagent", () => {
   assert.equal(has(builder.permissions, "question", "*", "deny"), true);
 });
 
+test("reviews 只允许 verifier 写", () => {
+  const roles = ["builder", "product", "architect", "ops"];
+  for (const role of roles) {
+    const data = parseFrontMatter(fs.readFileSync(agentPath(repoRoot, role), "utf8")).data;
+    const denied = (data.permissions ?? []).some(
+      (p) => p.action === "edit" && p.resource === ".sdd/reviews/**" && p.effect === "deny",
+    );
+    assert.equal(denied, true, `${role} 应 deny .sdd/reviews/**`);
+  }
+  const verifier = parseFrontMatter(fs.readFileSync(agentPath(repoRoot, "verifier"), "utf8")).data;
+  const verifierDeny = (verifier.permissions ?? []).some(
+    (p) => p.action === "edit" && p.resource === ".sdd/reviews/**" && p.effect === "deny",
+  );
+  assert.equal(verifierDeny, false);
+});
+
+test("子代理写操作 shell 需要确认，verifier 的 review new 放行", () => {
+  const builder = parseFrontMatter(fs.readFileSync(agentPath(repoRoot, "builder"), "utf8")).data;
+  const verifier = parseFrontMatter(fs.readFileSync(agentPath(repoRoot, "verifier"), "utf8")).data;
+  const hasRule = (perms, action, resource, effect) => (perms ?? []).some(
+    (p) => p.action === action && p.resource === resource && p.effect === effect,
+  );
+  assert.equal(hasRule(builder.permissions, "shell", "*task*update*", "ask"), true);
+  assert.equal(hasRule(builder.permissions, "shell", "*gate*check*", "ask"), true);
+  assert.equal(hasRule(verifier.permissions, "shell", "*review*new*", "allow"), true);
+});
+
 test("agent 漂移会被 checkAgentSync 发现", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-perm-"));
   fs.cpSync(path.join(repoRoot, ".opencode"), path.join(temp, ".opencode"), { recursive: true });

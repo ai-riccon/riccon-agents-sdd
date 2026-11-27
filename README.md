@@ -4,7 +4,7 @@
 
 你只跟 `sdd/lead` 对话。lead 决定执行哪些 spec-kit 命令、调度 `product` / `architect` / `builder` / `verifier` / `ops`，维护 `.sdd/` 交付账本，并在四道门停下来找你确认。
 
-当前版本：`0.1.0`。这是一个**受监督的交付团队**，不是全自动软件公司；生产发布、花钱、破坏性操作仍需你明确批准。
+当前版本：`0.1.1`。这是一个**受监督的交付团队**，不是全自动软件公司；生产发布、花钱、破坏性操作仍需你明确批准。
 
 ---
 
@@ -40,7 +40,7 @@ kickoff → specify → plan → tasks → 逐任务实现 → 独立验证 → 
 关键边界：
 
 - 只有 lead 能 spawn 子代理、能直接问用户；其他 agent 的 `subagent` 和 `question` 权限是 deny。
-- builder 只把任务推进到 `review`，不自己标 `done`。
+- builder 完成实现并请求 review；任务状态由 lead 更新，builder 不能自己标 `done`。
 - verifier 用新上下文；不复用上一个任务的 verifier 会话。
 - 高风险任务（认证、权限、支付、PII、迁移、并发、安全边界、外部集成、数据删除）必须有独立评审。
 - 任何人不能自我验收；lead 不能既实现又批准。
@@ -127,7 +127,7 @@ CLI：
 sdd init [dir] [--dry-run] [--no-git] [--no-default-agent]
 sdd doctor [--json]
 sdd status [--json]
-sdd upgrade [--write] [--force] [--spec-kit] [--project dir]
+sdd upgrade [--write --yes] [--dry-run] [--force] [--spec-kit] [--project dir]
 sdd state validate
 sdd task new|sync|list|show|update|scope
 sdd evidence run --task TASK-0001 --agent sdd/builder -- <command>
@@ -194,7 +194,7 @@ tests/                    node:test：toy E2E、任务、证据、升级、兼�
 
 ```bash
 node scripts/sdd.mjs upgrade --project /path/to/project --dry-run
-node scripts/sdd.mjs upgrade --project /path/to/project --write
+node scripts/sdd.mjs upgrade --project /path/to/project --write --yes
 ```
 
 - 基于 `.sdd/manifest.json` 的文件 hash。
@@ -206,7 +206,7 @@ node scripts/sdd.mjs upgrade --project /path/to/project --write
 
 - 团队兼容 `>=1.4.5 <2.0`；2.0 必须升级团队。
 - `sdd doctor` / `sdd compat check` 检查必需命令、模板、脚本和扩展。
-- `sdd upgrade --write --spec-kit` 才会执行 `specify integration upgrade opencode` / `specify extension update`，且需要用户明确同意。
+- `sdd upgrade --write --yes --spec-kit` 才会执行 `specify integration upgrade opencode` / `specify extension update`，且需要用户明确同意。
 
 **团队自我改进**：
 
@@ -238,6 +238,7 @@ node scripts/sdd.mjs upgrade --project /path/to/project --write
 - scope 检查只做路径归属，不能证明 authorship；合并前仍需看实际 diff。
 - 生产发布、真实 PII、生产密钥必须单独评审与批准。
 - Agent 是概率系统；门禁和证据降低风险，但不能消除错误。
+- 权限模式不是安全边界：子代理仍可能通过 shell 执行任意 `node` 命令；CLI 不校验调用者身份。`reviews/state` 的 edit deny 和 shell ask 是误操作防线，不是恶意隔离；真实隔离需要沙箱/一次性运行时。
 
 ---
 

@@ -259,6 +259,7 @@ export function validateState(projectRoot) {
   }
   const state = loadState(projectRoot);
   if (state) {
+    if (state.schema_version !== SCHEMA_VERSION) errors.push(`state.json schema_version 应为 ${SCHEMA_VERSION}`);
     if (!PHASES.includes(state.phase)) errors.push(`state.phase 非法：${state.phase}`);
     if (!state.gate || !GATES.includes(state.gate.name)) errors.push("state.gate.name 非法");
   }

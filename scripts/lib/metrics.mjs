@@ -50,7 +50,7 @@ export function computeMetrics(projectRoot) {
   const counts = {};
   for (const task of tasks) counts[task.status] = (counts[task.status] ?? 0) + 1;
   const gateFailures = events.filter((e) => e.type === "gate_failed").length;
-  const dispatches = events.filter((e) => e.type === "task_dispatched").length;
+  const dispatches = events.filter((e) => e.type === "task_started").length;
   const reworks = events.filter((e) => e.type === "task_rework").length;
   const evidenceFailures = evidence.filter((e) => e.exit_code !== 0).length;
   const cycleTimes = [];

@@ -4,6 +4,12 @@
   "title": "Riccon SDD review",
   "type": "object",
   "required": ["schema_version", "id", "kind", "reviewer", "verdict", "independent", "reviewed_evidence", "findings", "created_at"],
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "not": { "const": "analyze" } } } },
+      "then": { "required": ["reviewed_commit", "reviewed_evidence"] }
+    }
+  ],
   "properties": {
     "schema_version": { "const": 1 },
     "id": { "type": "string", "minLength": 1 },
@@ -15,7 +21,7 @@
     "session": { "type": ["string", "null"] },
     "verdict": { "enum": ["pass", "fail", "clean", "converged"] },
     "independent": { "type": "boolean" },
-    "reviewed_commit": { "type": ["string", "null"] },
+    "reviewed_commit": { "type": ["string", "null"], "minLength": 1 },
     "reviewed_evidence": { "type": "array", "items": { "type": "string" } },
     "findings": {
       "type": "array",

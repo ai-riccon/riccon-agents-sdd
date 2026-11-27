@@ -96,9 +96,10 @@ test("toy MVP 走完四道门 + 最终验收", async () => {
     updateTask(root, second.id, { status: "done", review: `REV-${second.id}-001` });
   }
 
-  writeConvergeReview(root);
-  writeFinalReview(root);
-  commitAll(root, "test: final 材料");
+  const finalCommit = commitAll(root, "test: final 材料");
+  const allEvidence = listTasks(root).flatMap((t) => t.evidence ?? []);
+  writeConvergeReview(root, { reviewed_commit: finalCommit, reviewed_evidence: allEvidence });
+  writeFinalReview(root, { reviewed_commit: finalCommit, reviewed_evidence: allEvidence });
   approve(root, "final");
   runCli(root, ["gate", "check", "--gate", "final"]);
   const state = readState(root);

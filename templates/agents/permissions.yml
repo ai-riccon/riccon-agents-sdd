@@ -147,7 +147,7 @@ base:
     resource: "sudo *"
     effect: ask
   - action: shell
-    resource: "*sdd decision answer*"
+    resource: "*decision*answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -184,6 +184,24 @@ subagents:
   - action: question
     resource: "*"
     effect: deny
+  - action: shell
+    resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: ask
+  - action: shell
+    resource: "*gate*check*"
+    effect: ask
+  - action: shell
+    resource: "*decision*new*"
+    effect: ask
+  - action: shell
+    resource: "*decision*answer*"
+    effect: ask
+  - action: shell
+    resource: "*handoff*new*"
+    effect: ask
 
 product:
   - action: edit
@@ -194,6 +212,12 @@ product:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/reviews/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
     effect: deny
   - action: edit
     resource: AGENTS.md
@@ -213,6 +237,12 @@ architect:
     resource: .sdd/decisions/**
     effect: deny
   - action: edit
+    resource: .sdd/reviews/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
+    effect: deny
+  - action: edit
     resource: AGENTS.md
     effect: deny
   - action: edit
@@ -228,6 +258,9 @@ builder:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/reviews/**
     effect: deny
   - action: edit
     resource: .sdd/handoffs/**
@@ -253,6 +286,9 @@ verifier:
     resource: .sdd/decisions/**
     effect: deny
   - action: edit
+    resource: .sdd/handoffs/**
+    effect: deny
+  - action: edit
     resource: AGENTS.md
     effect: deny
   - action: edit
@@ -264,6 +300,9 @@ verifier:
   - action: shell
     resource: "git commit*"
     effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: allow
 
 ops:
   - action: edit
@@ -274,6 +313,12 @@ ops:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/reviews/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
     effect: deny
   - action: edit
     resource: AGENTS.md

@@ -37,6 +37,7 @@ node .opencode/sdd/scripts/sdd.mjs evidence run \
      --reviewed-commit <sha> --reviewed-evidence EV-0001 --session ses_xxx
    ```
    front matter 必须包含 `kind: task`、`task`、`verdict`、`independent: true`、`reviewed_commit`、`reviewed_evidence`、`findings`。
+   findings 示例：`{"severity":"P1","title":"空输入返回 0","status":"open","file":"src/add.js"}`；severity 只接受 P0–P3（或 p0/critical 等可归一化别名），status 只接受 open/fixed/accepted/closed。只写正文、不写 frontmatter findings 会被门禁当成假绿。
 7. 返回：review ID、verdict、findings、独立证据 ID、未覆盖 AC。
 
 ## 反假绿清单

@@ -17,7 +17,11 @@ agent: sdd/lead
    - 将要新增/更新/删除的文件
    - 本地修改冲突
    - 是否需要同时升级 spec-kit 集成/扩展
-4. 只有用户明确同意后才运行 `SDD upgrade --write`；有本地修改冲突时先解释，再决定 `--force` 还是手工合并。
-5. 需要升级 spec-kit 侧时，单独征得同意后运行 `SDD upgrade --write --spec-kit`，并说明它会执行 `specify integration upgrade opencode` / `specify extension update`。
+4. 只有用户明确同意后才运行写入；由于目标项目内的 runtime 不能自升级，用团队源仓库 CLI 并加 `--yes`：
+   ```bash
+   node <team_source>/scripts/sdd.mjs upgrade --project <当前项目> --write --yes
+   ```
+   有本地修改冲突时先解释，再决定 `--force` 还是手工合并。
+5. 需要升级 spec-kit 侧时，单独征得同意后运行 `--write --yes --spec-kit`，并说明它会执行 `specify integration upgrade opencode` / `specify extension update`。
 6. 升级后运行 `SDD doctor` 和 `npm test`（如果项目有测试），报告结果。
 7. 不要在未备份/未 dry-run 的情况下直接写。

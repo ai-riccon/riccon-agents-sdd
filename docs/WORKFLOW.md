@@ -68,7 +68,7 @@ specs/NNN-<name>/
 
 ## 6. Implement
 
-v0.1.0 串行：
+v1 串行：
 
 ```text
 lead: task update in_progress

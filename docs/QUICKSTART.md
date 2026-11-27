@@ -98,7 +98,7 @@ lead 会：
 
 ```bash
 node scripts/sdd.mjs upgrade --project D:/Projects/my-app --dry-run
-node scripts/sdd.mjs upgrade --project D:/Projects/my-app --write
+node scripts/sdd.mjs upgrade --project D:/Projects/my-app --write --yes
 ```
 
 需要 spec-kit 侧升级时，先征得你同意，再加 `--spec-kit`。

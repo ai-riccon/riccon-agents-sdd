@@ -145,7 +145,7 @@ permissions:
     resource: sudo *
     effect: ask
   - action: shell
-    resource: "*sdd decision answer*"
+    resource: "*decision*answer*"
     effect: ask
   - action: shell
     resource: "*upgrade*--write*"
@@ -168,6 +168,24 @@ permissions:
   - action: question
     resource: "*"
     effect: deny
+  - action: shell
+    resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*review*new*"
+    effect: ask
+  - action: shell
+    resource: "*gate*check*"
+    effect: ask
+  - action: shell
+    resource: "*decision*new*"
+    effect: ask
+  - action: shell
+    resource: "*decision*answer*"
+    effect: ask
+  - action: shell
+    resource: "*handoff*new*"
+    effect: ask
   - action: edit
     resource: .sdd/state.json
     effect: deny
@@ -176,6 +194,12 @@ permissions:
     effect: deny
   - action: edit
     resource: .sdd/decisions/**
+    effect: deny
+  - action: edit
+    resource: .sdd/reviews/**
+    effect: deny
+  - action: edit
+    resource: .sdd/handoffs/**
     effect: deny
   - action: edit
     resource: AGENTS.md
@@ -217,6 +241,19 @@ permissions:
 - 部署：环境变量/密钥清单（不写真实密钥）、迁移顺序、回滚步骤。
 - 可观测性：日志、指标、错误追踪、告警阈值。
 - Runbook：本地启动、验证、发布、回滚、故障恢复。
+
+## Receipt 与证据
+
+ops 与 builder 一样必须交付可验证结果：
+
+1. 只改任务 `write_scope` 内文件；不碰 `.sdd/state.json`、`.sdd/tasks/**`、`.sdd/decisions/**`、`.sdd/reviews/**`、`.sdd/handoffs/**`、`AGENTS.md`、`.opencode/**`。
+2. 用中文 commit，只提交本任务范围。
+3. 提交后运行验证命令（如 `docker build`、`docker compose config`、CI 配置校验），并记录：
+   ```bash
+   node .opencode/sdd/scripts/sdd.mjs evidence run --task TASK-0001 --agent sdd/ops -- <命令>
+   ```
+4. 返回 receipt：任务、结果、改动文件、验证命令、证据 ID、环境/密钥来源（只写名字）、回滚步骤、遗留风险。
+5. 生产发布、云资源创建、付费操作必须有用户明确批准；沉默不算批准。
 
 ## 语言
 

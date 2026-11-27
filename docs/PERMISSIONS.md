@@ -34,11 +34,13 @@ base → subagents（非 lead）→ 角色特定
 |---|---|
 | `lead` | `subagent *` deny → `subagent sdd/*` allow；`question *` allow |
 | 所有子代理 | `subagent *` deny；`question *` deny |
-| `product` | 禁止编辑 `.sdd/state.json`、`tasks/**`、`decisions/**`、`AGENTS.md`、`.opencode/**` |
+| `product` | 禁止编辑 `.sdd/state.json`、`tasks/**`、`decisions/**`、`.sdd/reviews/**`、`handoffs/**`、`AGENTS.md`、`.opencode/**` |
 | `architect` | 同上 |
 | `builder` | 同上；另禁 `.sdd/handoffs/**`、`.specify/**` |
-| `verifier` | 同上；另禁 `.specify/**`；`git commit*` ask |
-| `ops` | 禁止编辑 state/tasks/decisions/AGENTS.md/.opencode；不写功能代码 |
+| `verifier` | 禁止 state/tasks/decisions/handoffs/AGENTS.md/.opencode/.specify；保留 `.sdd/reviews/**` 写权；`git commit*` ask |
+| `ops` | 禁止编辑 state/tasks/decisions/reviews/handoffs/AGENTS.md/.opencode；不写功能代码 |
+
+子代理的 shell 写操作额外 ask：`*task*update*`、`*review*new*`、`*gate*check*`、`*decision*new*`、`*decision*answer*`、`*handoff*new*`。verifier 的 `review new` 单独 allow（这是它的职责）。
 
 静态权限只表达“不能写团队状态/配置”；**任务级 `write_scope` 是提示词 + lead diff 检查**，不是静态权限能完全表达的。
 
@@ -49,6 +51,7 @@ base → subagents（非 lead）→ 角色特定
 - builder 不能标 done；verifier 不能修源码；product/architect 不能写 spec/plan/tasks。
 - 生产发布、花钱、破坏性操作必须用户明确批准。
 - 权限模式不是安全边界；真正隔离需要沙箱/一次性运行时。
+- CLI 不校验调用者身份。子代理仍可通过 shell 执行任意 `node` 命令绕过 edit deny；ask 规则是误操作防线，不是恶意隔离。生产环境请用沙箱/受限 runner。
 
 ## 5. 秘密
 
