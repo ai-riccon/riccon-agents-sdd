@@ -1,11 +1,11 @@
 # 评测
 
-## 1. v0.1.1 验收
+## 1. v0.1.2 验收
 
 | # | 验收项 | 方式 |
 |---|---|---|
 | 1 | 源仓库检查通过 | `npm run check` |
-| 2 | 单元/集成测试通过 | `npm test`（51 个测试） |
+| 2 | 单元/集成测试通过 | `npm test`（63 个测试） |
 | 3 | dry-run init 通过 | `npm run smoke` |
 | 4 | 真实项目安装 | `sdd init <temp>` + `sdd doctor` |
 | 5 | spec-kit 1.4.5 集成 | `specify version --json`、命令/模板/脚本检查 |
@@ -22,7 +22,7 @@
 | L3 | 真实项目 | 一个 greenfield MVP 走完四道门 |
 | L4 | 复现/回归 | 新会话从 handoff 恢复并继续 |
 
-v0.1.1 达到 L1 + L2 + toy L3；真实项目 L3/L4 需要在使用中积累。
+v0.1.2 达到 L1 + L2 + toy L3；真实项目 L3/L4 需要在使用中积累。
 
 ## 3. 真实项目指标
 

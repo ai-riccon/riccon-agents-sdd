@@ -308,10 +308,3 @@ export function taskScopeViolations(projectRoot, id, { base = null, head = null 
     return { checked: false, violations: [], files: [], reason: error.message };
   }
 }
-
-export function taskStats(projectRoot) {
-  const tasks = listTasks(projectRoot);
-  const counts = {};
-  for (const task of tasks) counts[task.status] = (counts[task.status] ?? 0) + 1;
-  return { total: tasks.length, counts };
-}

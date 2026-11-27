@@ -61,6 +61,9 @@ base:
   - action: edit
     resource: "**/*.key"
     effect: ask
+  - action: edit
+    resource: .sdd/evidence/**
+    effect: deny
 
   - action: shell
     resource: "*"
@@ -185,7 +188,13 @@ subagents:
     resource: "*"
     effect: deny
   - action: shell
+    resource: "*task*new*"
+    effect: ask
+  - action: shell
     resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*task*sync*"
     effect: ask
   - action: shell
     resource: "*review*new*"
@@ -201,6 +210,9 @@ subagents:
     effect: ask
   - action: shell
     resource: "*handoff*new*"
+    effect: ask
+  - action: shell
+    resource: "*retro*new*"
     effect: ask
 
 product:

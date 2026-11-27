@@ -5,12 +5,12 @@ import {
   assertInsideOrEqual,
   ensureDir,
   exists,
+  formatArgv,
   gitHead,
   gitIsClean,
   nextId,
   nowIso,
   readJson,
-  readText,
   runProcess,
   runProcessArgv,
   safeEvidenceId,
@@ -94,13 +94,14 @@ export async function runEvidence(projectRoot, {
   }
   const config = loadConfig(projectRoot);
   const commit = gitHead(projectRoot);
+  if (!commit) throw new Error("仓库没有 HEAD；先提交再取证。");
   const dirty = !gitIsClean(projectRoot);
   if (!allowDirty && dirty) {
     const { git } = await import("./util.mjs");
     const status = git(["status", "--porcelain"], projectRoot);
     throw new Error(`工作树不干净；先提交（或在明确接受风险时使用 --allow-dirty）。\n${status.stdout}`);
   }
-  const displayCommand = command ?? argv.join(" ");
+  const displayCommand = argv?.length ? formatArgv(argv) : command;
   const result = argv?.length
     ? await runProcessArgv(argv[0], argv.slice(1), {
         cwd: resolvedCwd,
@@ -211,12 +212,4 @@ export function validateEvidence(projectRoot, evidence, { task = null, requireCo
     }
   }
   return { ok: errors.length === 0, errors };
-}
-
-export function passingEvidence(projectRoot, taskId = null) {
-  return listEvidence(projectRoot, taskId).filter((ev) => ev.exit_code === 0 && !ev.manual);
-}
-
-export function readEvidenceLog(projectRoot, evidence) {
-  return readText(path.join(projectRoot, evidence.log_path ?? ""), "");
 }

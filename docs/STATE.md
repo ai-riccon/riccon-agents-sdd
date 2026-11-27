@@ -131,7 +131,8 @@ planned → ready → in_progress → review → done
 
 - 只由 `sdd evidence run` 生成；手工证据不能用于 done/final。
 - 先提交再取证；`.sdd/` 自身变化不算 dirty，源码未提交才算。
-- done/final 要求 `commit` 非空、`dirty=false`、`evidence.task` 匹配、`commit === task.end_commit`、日志位于 `.sdd/evidence/<task>/` 且非空。
+- done/final 要求 `commit` 非空、`dirty=false`、`evidence.task` 匹配、日志位于 `.sdd/evidence/<task>/` 且非空。
+- done 证据要求 `commit === task.end_commit`；`gate=final` 证据要求 `commit === 当前 HEAD`。
 - `--gate final` 允许对 `done` 任务取最终证据，绑定到最后一个任务。
 - 日志上限默认 2 MB，超出截断并标记。
 - v1 不做日志哈希；需要时可在 config 打开 `evidence.hash`（未来）。

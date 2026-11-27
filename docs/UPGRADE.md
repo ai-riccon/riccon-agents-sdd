@@ -17,7 +17,7 @@
 ```json
 {
   "schema_version": 1,
-  "team_version": "0.1.1",
+  "team_version": "0.1.2",
   "installed_at": "...",
   "speckit_version": "1.4.5",
   "compat_range": ">=1.4.5 <2.0",

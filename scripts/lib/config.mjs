@@ -45,7 +45,10 @@ export function defaultConfig() {
 
 export function loadConfig(projectRoot) {
   const p = path.join(projectRoot, CONFIG_PATH);
-  const raw = exists(p) ? readYaml(p, {}) : {};
+  const raw = exists(p) ? readYaml(p) : {};
+  if (raw !== null && (typeof raw !== "object" || Array.isArray(raw))) {
+    throw new Error("config.yml 必须是 YAML 映射（key: value）");
+  }
   return mergeDeep(defaultConfig(), raw ?? {});
 }
 

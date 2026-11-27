@@ -60,6 +60,9 @@ permissions:
   - action: edit
     resource: "**/*.key"
     effect: ask
+  - action: edit
+    resource: .sdd/evidence/**
+    effect: deny
   - action: shell
     resource: "*"
     effect: allow
@@ -169,7 +172,13 @@ permissions:
     resource: "*"
     effect: deny
   - action: shell
+    resource: "*task*new*"
+    effect: ask
+  - action: shell
     resource: "*task*update*"
+    effect: ask
+  - action: shell
+    resource: "*task*sync*"
     effect: ask
   - action: shell
     resource: "*review*new*"
@@ -185,6 +194,9 @@ permissions:
     effect: ask
   - action: shell
     resource: "*handoff*new*"
+    effect: ask
+  - action: shell
+    resource: "*retro*new*"
     effect: ask
   - action: edit
     resource: .sdd/state.json

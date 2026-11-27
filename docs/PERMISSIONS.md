@@ -40,7 +40,9 @@ base → subagents（非 lead）→ 角色特定
 | `verifier` | 禁止 state/tasks/decisions/handoffs/AGENTS.md/.opencode/.specify；保留 `.sdd/reviews/**` 写权；`git commit*` ask |
 | `ops` | 禁止编辑 state/tasks/decisions/reviews/handoffs/AGENTS.md/.opencode；不写功能代码 |
 
-子代理的 shell 写操作额外 ask：`*task*update*`、`*review*new*`、`*gate*check*`、`*decision*new*`、`*decision*answer*`、`*handoff*new*`。verifier 的 `review new` 单独 allow（这是它的职责）。
+子代理的 shell 写操作额外 ask：`*task*new*`、`*task*update*`、`*task*sync*`、`*review*new*`、`*gate*check*`、`*decision*new*`、`*decision*answer*`、`*handoff*new*`、`*retro*new*`。verifier 的 `review new` 单独 allow（这是它的职责）。
+
+`.sdd/evidence/**` 对所有角色 edit deny：证据只能由 `sdd evidence run` 生成，不能手改。
 
 静态权限只表达“不能写团队状态/配置”；**任务级 `write_scope` 是提示词 + lead diff 检查**，不是静态权限能完全表达的。
 

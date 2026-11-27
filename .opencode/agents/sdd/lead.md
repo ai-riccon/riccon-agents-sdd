@@ -60,6 +60,9 @@ permissions:
   - action: edit
     resource: "**/*.key"
     effect: ask
+  - action: edit
+    resource: .sdd/evidence/**
+    effect: deny
   - action: shell
     resource: "*"
     effect: allow

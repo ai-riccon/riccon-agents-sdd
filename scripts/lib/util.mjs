@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
@@ -254,11 +255,69 @@ export function matchesScope(file, scopes) {
   return false;
 }
 
-function quoteWinArg(value) {
-  const s = String(value);
-  if (s === "") return '""';
-  if (!/[\s"&|<>^()%!]/.test(s)) return s;
-  return `"${s.replace(/"/g, '\\"')}"`;
+export function formatArgv(argv) {
+  return (argv ?? []).map((value) => {
+    const s = String(value);
+    if (s === "") return '""';
+    if (/[\s"'\\]/.test(s)) return JSON.stringify(s);
+    return s;
+  }).join(" ");
+}
+
+function resolveWindowsProgram(program) {
+  const raw = String(program);
+  if (/\.exe$/i.test(raw)) return { program: raw, wrapper: false };
+  if (/\.(cmd|bat)$/i.test(raw)) return { program: raw, wrapper: true };
+  if (path.isAbsolute(raw) || raw.includes("/") || raw.includes("\\")) {
+    return { program: raw, wrapper: true };
+  }
+  const result = spawnSync("where.exe", [raw], { encoding: "utf8", windowsHide: true });
+  const candidates = (result.stdout ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const exe = candidates.find((candidate) => /\.exe$/i.test(candidate));
+  if (exe) return { program: exe, wrapper: false };
+  const cmd = candidates.find((candidate) => /\.(cmd|bat)$/i.test(candidate));
+  if (cmd) return { program: cmd, wrapper: true };
+  return { program: raw, wrapper: true };
+}
+
+function spawnPowerShellWrapper(program, args, { cwd }) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sdd-argv-"));
+  const jsonPath = path.join(dir, "args.json");
+  const scriptPath = path.join(dir, "run.ps1");
+  fs.writeFileSync(jsonPath, JSON.stringify({ program, args }), "utf8");
+  fs.writeFileSync(scriptPath, `$ErrorActionPreference = 'Stop'
+$payload = Get-Content -Raw -LiteralPath $args[0] | ConvertFrom-Json
+$program = [string]$payload.program
+$argv = @($payload.args)
+& $program @argv
+if ($null -eq $LASTEXITCODE) { exit 1 } else { exit $LASTEXITCODE }
+`, "utf8");
+  let child;
+  try {
+    child = spawn("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      scriptPath,
+      jsonPath,
+    ], {
+      cwd,
+      windowsHide: true,
+      env: process.env,
+    });
+  } catch (error) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    throw error;
+  }
+  return {
+    child,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
 function killTree(child) {
@@ -285,6 +344,7 @@ function runProcessInternal({ command, program, args, cwd, timeoutMs, maxBytes }
     let timedOut = false;
     let settled = false;
     let child;
+    let cleanup = null;
     let timer;
     let fallbackTimer;
 
@@ -293,6 +353,7 @@ function runProcessInternal({ command, program, args, cwd, timeoutMs, maxBytes }
       settled = true;
       if (timer) clearTimeout(timer);
       if (fallbackTimer) clearTimeout(fallbackTimer);
+      try { cleanup?.(); } catch { /* ignore */ }
       resolve(payload);
     };
 
@@ -311,19 +372,25 @@ function runProcessInternal({ command, program, args, cwd, timeoutMs, maxBytes }
 
     try {
       if (program) {
-        if (process.platform === "win32" && !/\.exe$/i.test(program)) {
-          const line = [program, ...args].map(quoteWinArg).join(" ");
-          child = spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", line], {
-            cwd,
-            windowsHide: true,
-            env: process.env,
-          });
+        if (process.platform === "win32") {
+          const resolved = resolveWindowsProgram(program);
+          if (resolved.wrapper) {
+            const wrapped = spawnPowerShellWrapper(resolved.program, args, { cwd });
+            child = wrapped.child;
+            cleanup = wrapped.cleanup;
+          } else {
+            child = spawn(resolved.program, args, {
+              cwd,
+              windowsHide: true,
+              env: process.env,
+            });
+          }
         } else {
           child = spawn(program, args, {
             cwd,
             windowsHide: true,
             env: process.env,
-            detached: process.platform !== "win32",
+            detached: true,
           });
         }
       } else {
@@ -336,6 +403,7 @@ function runProcessInternal({ command, program, args, cwd, timeoutMs, maxBytes }
         });
       }
     } catch (err) {
+      stderr += String(err);
       finish(result(1, null));
       return;
     }

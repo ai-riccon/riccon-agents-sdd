@@ -46,9 +46,20 @@ test("子代理写操作 shell 需要确认，verifier 的 review new 放行", (
   const hasRule = (perms, action, resource, effect) => (perms ?? []).some(
     (p) => p.action === action && p.resource === resource && p.effect === effect,
   );
-  assert.equal(hasRule(builder.permissions, "shell", "*task*update*", "ask"), true);
-  assert.equal(hasRule(builder.permissions, "shell", "*gate*check*", "ask"), true);
+  for (const resource of ["*task*new*", "*task*update*", "*task*sync*", "*gate*check*", "*retro*new*"]) {
+    assert.equal(hasRule(builder.permissions, "shell", resource, "ask"), true, resource);
+  }
   assert.equal(hasRule(verifier.permissions, "shell", "*review*new*", "allow"), true);
+});
+
+test("evidence 文件禁止直接 edit，必须走 evidence run", () => {
+  for (const role of ["lead", "product", "architect", "builder", "verifier", "ops"]) {
+    const data = parseFrontMatter(fs.readFileSync(agentPath(repoRoot, role), "utf8")).data;
+    const denied = (data.permissions ?? []).some(
+      (p) => p.action === "edit" && p.resource === ".sdd/evidence/**" && p.effect === "deny",
+    );
+    assert.equal(denied, true, `${role} 应 deny .sdd/evidence/**`);
+  }
 });
 
 test("agent 漂移会被 checkAgentSync 发现", () => {

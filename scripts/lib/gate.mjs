@@ -258,7 +258,3 @@ export function runGate(projectRoot, gate) {
   }
   return result;
 }
-
-export function gateCommand(projectRoot, gate) {
-  return runGate(projectRoot, gate);
-}

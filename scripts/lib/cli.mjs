@@ -130,7 +130,7 @@ function usage() {
   sdd init [目录] [--dry-run] [--no-git] [--no-default-agent]
   sdd doctor [--json]
   sdd status [--json] [--project 目录]
-  sdd upgrade [--write] [--force] [--spec-kit] [--project 目录]
+  sdd upgrade [--dry-run] [--write --yes] [--force] [--spec-kit] [--project 目录]
   sdd state validate [--project 目录]
   sdd task new --title ... [--scope a,b] [--acceptance ...] [--verify ...]
   sdd task sync [--feature 目录]

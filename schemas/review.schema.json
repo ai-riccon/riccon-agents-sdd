@@ -7,7 +7,13 @@
   "allOf": [
     {
       "if": { "properties": { "kind": { "not": { "const": "analyze" } } } },
-      "then": { "required": ["reviewed_commit", "reviewed_evidence"] }
+      "then": {
+        "required": ["reviewed_commit", "reviewed_evidence"],
+        "properties": {
+          "reviewed_commit": { "type": "string", "minLength": 1 },
+          "reviewed_evidence": { "minItems": 1 }
+        }
+      }
     }
   ],
   "properties": {

@@ -5,7 +5,7 @@ import path from "node:path";
 import { makeProject, initGit, commitAll, writeTasks } from "./helpers.mjs";
 import { listTasks, loadTask, syncTasks, updateTask } from "../scripts/lib/task.mjs";
 import { runEvidence, listEvidence, loadEvidence, validateEvidence } from "../scripts/lib/evidence.mjs";
-import { runProcessArgv, writeJson, writeText } from "../scripts/lib/util.mjs";
+import { formatArgv, runProcessArgv, writeJson, writeText } from "../scripts/lib/util.mjs";
 
 test("evidence run 记录命令、exit code 和日志", async () => {
   const root = makeProject("evidence");
@@ -184,11 +184,42 @@ test("patch.evidence 会持久化", async () => {
   assert.deepEqual(updated.evidence, [ev.id]);
 });
 
-test("runProcessArgv 保留参数空格并支持超时杀进程树", async () => {
-  const spaced = await runProcessArgv(process.execPath, ["-e", "console.log('a b')"]);
+test("没有 HEAD 时拒绝取证", async () => {
+  const root = makeProject("evidence-nohead");
+  const task = {
+    id: "TASK-0001",
+    status: "in_progress",
+    write_scope: ["src/"],
+    acceptance: ["a"],
+    verify: ["git rev-parse HEAD"],
+  };
+  writeJson(path.join(root, ".sdd", "tasks", "TASK-0001.json"), task);
+  await assert.rejects(
+    () => runEvidence(root, { taskId: task.id, agent: "sdd/builder", command: "git rev-parse HEAD" }),
+    /没有 HEAD/,
+  );
+});
+
+test("runProcessArgv 保留参数空格/引号且不注入 cmd 元字符", async () => {
+  assert.equal(formatArgv(["node", "-e", "console.log('a b')"]), `node -e "console.log('a b')"`);
+  const spaced = await runProcessArgv("node", ["-e", "console.log('a b')"]);
   assert.equal(spaced.exitCode, 0);
   assert.match(spaced.stdout, /a b/);
 
+  const injected = await runProcessArgv("node", [
+    "-e",
+    "console.log('ok')",
+    'x" & echo INJECTED & "',
+  ]);
+  assert.equal(injected.exitCode, 0);
+  assert.match(injected.stdout, /ok/);
+  assert.doesNotMatch(injected.stdout, /INJECTED/);
+
+  const percent = await runProcessArgv("node", ["-e", "console.log(process.argv[1])", "%SDD_R1%"]);
+  assert.equal(percent.exitCode, 0);
+  assert.match(percent.stdout, /%SDD_R1%/);
+
   const timed = await runProcessArgv(process.execPath, ["-e", "setTimeout(()=>{}, 10000)"], { timeoutMs: 300 });
   assert.equal(timed.timedOut, true);
+  assert.ok(timed.durationMs < 5000, `超时未及时返回：${timed.durationMs}ms`);
 });

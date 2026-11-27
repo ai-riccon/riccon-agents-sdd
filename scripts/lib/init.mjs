@@ -49,7 +49,7 @@ export function mergeOpencode(projectRoot, { noDefaultAgent = false } = {}) {
   return { file, created: !existing, default_agent: config.default_agent ?? null };
 }
 
-function backupTeamFiles(teamRoot, projectRoot, backupDir) {
+export function backupTeamFiles(teamRoot, projectRoot, backupDir) {
   const entries = collectManagedEntries(teamRoot);
   for (const entry of entries) {
     const src = path.join(projectRoot, entry.target);

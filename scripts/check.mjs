@@ -41,6 +41,14 @@ for (const file of [
 const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
 if (pkg.version !== TEAM_VERSION) errors.push(`package.json ${pkg.version} != version.mjs ${TEAM_VERSION}`);
 
+const readme = fs.readFileSync(path.join(repoRoot, "README.md"), "utf8");
+const readmeVersion = readme.match(/当前版本：`([0-9]+\.[0-9]+\.[0-9]+)`/)?.[1];
+if (readmeVersion !== TEAM_VERSION) errors.push(`README.md ${readmeVersion ?? "未找到版本"} != version.mjs ${TEAM_VERSION}`);
+
+const changelog = fs.readFileSync(path.join(repoRoot, "CHANGELOG.md"), "utf8");
+const changelogVersion = changelog.match(/^##\s+([0-9]+\.[0-9]+\.[0-9]+)/m)?.[1];
+if (changelogVersion !== TEAM_VERSION) errors.push(`CHANGELOG.md ${changelogVersion ?? "未找到版本"} != version.mjs ${TEAM_VERSION}`);
+
 const sync = checkAgentSync(repoRoot, repoRoot);
 if (!sync.ok) errors.push(...sync.problems);
 
