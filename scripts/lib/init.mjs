@@ -123,6 +123,9 @@ export async function initProject(projectRoot, teamRoot, {
     actions.push("配置 git 扩展：auto-commit 关闭");
   }
 
+  if (exists(path.join(root, ".sdd", "state.json"))) {
+    actions.push("警告：项目已初始化；本次会覆盖团队管理文件，建议改用 sdd upgrade");
+  }
   const entries = installTeamFiles(teamRoot, root);
   actions.push(`安装团队文件 ${entries.length} 个`);
 
