@@ -243,6 +243,7 @@ node scripts/sdd.mjs upgrade --project /path/to/project --write
 
 ## 文档
 
+- [快速开始](docs/QUICKSTART.md)
 - [设计](docs/DESIGN.md)
 - [工作流](docs/WORKFLOW.md)
 - [状态与门禁](docs/STATE.md)
