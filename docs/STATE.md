@@ -30,6 +30,7 @@
 | `created_at` | 创建时间（+08:00） |
 | `team_version` | 安装时的团队版本 |
 | `speckit_version` | 安装时的 spec-kit 版本 |
+| `team_source` | 团队源仓库路径（用于 `/sdd-improve` 写提案） |
 | `track` | v1 固定 `greenfield` |
 | `timezone` | 默认 `Asia/Shanghai` |
 | `integration` | 固定 `opencode` |

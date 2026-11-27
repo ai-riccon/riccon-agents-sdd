@@ -132,7 +132,7 @@ export async function initProject(projectRoot, teamRoot, {
   actions.push(`opencode.json：${opencode.created ? "创建" : "合并"}（default_agent=${opencode.default_agent ?? "未设置"}）`);
 
   const version = await getSpeckitVersion(root);
-  initProjectState(root, { name: projectName, speckitVersion: version.version });
+  initProjectState(root, { name: projectName, speckitVersion: version.version, teamSource: teamRoot });
   const compat = loadCompat(teamRoot);
   const manifest = buildManifest(teamRoot, root, {
     team_version: TEAM_VERSION,

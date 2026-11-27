@@ -23,7 +23,7 @@ description: 团队与 spec-kit 的升级/兼容协议：doctor、compat、manif
 
 ## 升级流程
 
-1. 在团队源仓库运行 `sdd upgrade --project <目标项目> --dry-run`。
+1. 在团队源仓库运行 `sdd upgrade --project <目标项目> --dry-run`；如果当前在目标项目，先读 `.sdd/project.json` 的 `team_source`，用 `node <team_source>/scripts/sdd.mjs upgrade --project <当前项目> --dry-run`。
 2. 看四类结果：新增、更新、删除、本地修改。
 3. 本地修改 = 目标文件 hash 与 manifest 记录不一致；默认跳过，避免覆盖项目定制。
 4. 用户确认后 `--write`；升级前自动备份到 `.sdd/backup/upgrade-<时间>/`。

@@ -6,7 +6,11 @@ agent: sdd/lead
 # /sdd-upgrade
 
 1. 运行 `SDD doctor`、`SDD compat check`。
-2. 运行 `SDD upgrade --dry-run`（目标项目用 `--project <目录>`；在源仓库运行）。
+2. 读 `.sdd/project.json` 的 `team_source`。如果当前是目标项目的已安装 runtime（`sdd upgrade` 会拒绝），改用团队源仓库的 CLI：
+   ```bash
+   node <team_source>/scripts/sdd.mjs upgrade --project <当前项目> --dry-run
+   ```
+   如果 `team_source` 不存在，向用户要团队仓库路径。
 3. 向用户报告：
    - 团队版本 vs 项目安装版本
    - spec-kit 版本 vs 兼容范围

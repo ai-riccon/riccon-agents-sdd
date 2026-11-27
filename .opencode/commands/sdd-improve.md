@@ -12,7 +12,7 @@ agent: sdd/lead
    - 哪些提示词、skill、CLI 或模板不好用
    - token/时间/派发次数是否异常
 3. 运行 `SDD retro new --summary "..." --friction "..." --proposals "..."` 记录本次复盘。
-4. 如果发现团队级改进点，在 **团队源仓库** 的 `docs/proposals/` 写一份提案（不是目标项目）：
+4. 读 `.sdd/project.json` 的 `team_source`；如果存在，在 **团队源仓库** 的 `docs/proposals/` 写一份提案（不是目标项目）；如果不存在，写到 `.sdd/retro/PROPOSAL-<日期>.md` 并提示用户把提案带回团队仓库。
    - 问题与证据
    - 影响范围
    - 建议改动（文件/提示词/权限/CLI）

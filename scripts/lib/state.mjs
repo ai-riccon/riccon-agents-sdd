@@ -72,7 +72,7 @@ export function emptyState(projectRoot) {
   };
 }
 
-export function initProjectState(projectRoot, { name, speckitVersion = null, teamVersion = TEAM_VERSION } = {}) {
+export function initProjectState(projectRoot, { name, speckitVersion = null, teamVersion = TEAM_VERSION, teamSource = null } = {}) {
   ensureStateDirs(projectRoot);
   const now = nowIso();
   const project = {
@@ -82,6 +82,7 @@ export function initProjectState(projectRoot, { name, speckitVersion = null, tea
     created_at: now,
     team_version: teamVersion,
     speckit_version: speckitVersion,
+    team_source: teamSource,
     track: "greenfield",
     timezone: "Asia/Shanghai",
     integration: "opencode",

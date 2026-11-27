@@ -12,7 +12,7 @@
 - 项目级安装：`sdd init` 安装 agents/commands/skills/runtime，初始化 spec-kit、git、assess/bug 扩展，合并 `default_agent`。
 - `.sdd/` 交付账本：project/state/config/brief/manifest、tasks、decisions、evidence、reviews、handoffs、retro、metrics。
 - 四道门 + 最终验收：kickoff、spec、plan、tasks、final。
-- CLI：init、doctor、status、upgrade、state validate、task new/sync/list/show/update/scope、evidence run/list、gate check、decision new/answer/list/show、handoff new/list、retro new、metrics、compat check、version。
+- CLI：init、doctor、status、upgrade、state validate、task new/sync/list/show/update/scope、evidence run/list、gate check、review new/list/show、decision new/answer/list/show、handoff new/list、retro new、metrics、compat check、version。
 - 团队升级：manifest/hash、dry-run、备份、本地修改冲突处理、spec-kit 侧升级开关。
 - spec-kit 兼容：`>=1.4.5 <2.0`，检查必需命令/模板/脚本/扩展。
 - 测试：20 个 `node:test`，覆盖 toy E2E、任务生命周期、证据、scope、升级、兼容、权限同步、schema；`npm test` / `npm run check` / `npm run smoke`。

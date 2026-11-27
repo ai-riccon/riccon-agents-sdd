@@ -11,6 +11,7 @@
     "created_at": { "type": "string" },
     "team_version": { "type": "string" },
     "speckit_version": { "type": ["string", "null"] },
+    "team_source": { "type": ["string", "null"] },
     "track": { "enum": ["greenfield"] },
     "timezone": { "type": "string" },
     "integration": { "const": "opencode" }
