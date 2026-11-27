@@ -1,0 +1,11 @@
+Riccon SDD
+Copyright 2026 Ricky Licong
+
+Riccon SDD 是 Riccon Agents 的姊妹项目，使用 Apache-2.0 许可。
+它借鉴了 Riccon Agents 的角色边界、状态、handoff、门禁和证据思路，
+并以 GitHub Spec Kit 作为规格驱动开发的基础设施。
+
+This is a sibling project of Riccon Agents, licensed under Apache-2.0.
+It borrows the role boundaries, state, handoff, gates and evidence ideas
+from Riccon Agents, and builds on GitHub Spec Kit as the specification
+driven development foundation.
